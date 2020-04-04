@@ -12,6 +12,16 @@ Usuario::Usuario(string nombreN, string ipN)
 	ip=ipN;
 }
 
+time_t Usuario::GetHoraUltimoMensaje()
+{
+	return horaUltimoMensaje;
+}
+void Usuario::SetHoraUltimoMensaje(time_t nuevaHora)
+{
+	horaUltimoMensaje=nuevaHora;
+
+}
+
 string Usuario::GetEstado()
 {
 

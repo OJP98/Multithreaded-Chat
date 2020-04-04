@@ -15,6 +15,8 @@ public:
 	string GetEstado();
 	string Info();
 	int CambioEstado(int nuevoEstado);
+	time_t GetHoraUltimoMensaje();
+	void SetHoraUltimoMensaje(time_t nuevaHora);
 		
 
 private:

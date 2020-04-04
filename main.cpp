@@ -10,14 +10,17 @@ using namespace std;
 int main(int argc, char const *argv[])
 {
 	vector<Usuario> g1;
-	cout<<g1.size()<<endl;
-	Usuario nuevoUsuario("asd","asds");
-	
+	Usuario nuevoUsuario("TheJP","100.102.120");
 
+	cout<<"Cambio de estado "<<nuevoUsuario.CambioEstado(5)<<endl;
+
+	time_t tiempo1;
+	time(&tiempo1);
+	nuevoUsuario.SetHoraUltimoMensaje(tiempo1);
+	
+	cout<<"Hora "<<nuevoUsuario.GetHoraUltimoMensaje()<<endl;
 	
 	g1.push_back(nuevoUsuario);
-	cout<<g1.size()<<endl;
-
 	
 	cout<<g1[0].Info()<<endl;
 	
