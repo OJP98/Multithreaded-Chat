@@ -1,3 +1,4 @@
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,8 +8,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 // #include "mensaje.pb.h"
-// using namespace std;
 // using namespace chat;
+using namespace std;
 
 void error(const char *msg)
 {
@@ -20,19 +21,21 @@ int main(int argc, char *argv[])
 {
 	int sockfd, newsockfd, portno;
 	socklen_t clilen;
-	char buffer[256];
+	bool salir = false;
+	int bufsize = 1024;
+	char buffer[bufsize];
 	struct sockaddr_in serv_addr, cli_addr;
 	int n;
 
 	if (argc < 2) {
-		fprintf(stderr,"ERROR, no port provided\n");
+		fprintf(stderr,"ERROR, no se obtuvo un puerto\n");
 		exit(1);
 	}
 	// Crear un socket
 	// socket(int domain, int type, int protocol)
 	sockfd =  socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) 
-		error("ERROR opening socket");
+		error("ERROR no se pudo abrir el socket");
 
 	// Liberar memoria para obtener address de usuario
 	bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -66,31 +69,86 @@ int main(int argc, char *argv[])
 	// Se acepta la conexión con la infromación del cliente en la estructura del cliente.
 	// Retorna un nuevo file descriptor de la conexión aceptada, este se puede seguir usando
 	// para mantener comunicación con el cliente.
+	int cantClientes = 1;
 	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
 	if (newsockfd < 0)
 		 error("ERROR, no fue posible aceptar el socket del cliente");
 
 
-	printf("server: Se obtuvo conexión exitosa de %s en el puerto %d\n",
-		inet_ntoa(cli_addr.sin_addr), htons(cli_addr.sin_port));
+	while (newsockfd > 0) 
+	{
+		strcpy(buffer, "SERVIDOR CONECTADO!\n");
+		send(newsockfd, buffer, clilen, 0);
+		cout << "Conectado con el cliente #" << cantClientes << "\n";
+		cout << "Para terminar la conexión, escribir #\n";
 
-	// Enviar hola mundo al usuario
-	send(newsockfd, "Holaa, mundo!\n", 13, 0);
+		printf("\nCliente: ");
+		do {
+			bzero(buffer, bufsize);
+			recv(newsockfd, buffer, bufsize, 0);
+			printf("%s ", buffer);
+			// cout << buffer << " ";
+			if (*buffer == '#') {
+				*buffer = '*';
+				salir = true;
+			}
+		} while (*buffer != '*');
 
-	// Preparar buffer
-	bzero(buffer,256);
+		do {
+			printf("\n");
+			do {
+				printf("Servidor: ");
+				bzero(buffer, bufsize);
+				fgets(buffer, bufsize, stdin);
+				// cin >> buffer;
+				send(newsockfd, buffer, bufsize, 0);
+				if (*buffer == '#') {
+					send(newsockfd, buffer, bufsize, 0);
+					*buffer = '*';
+					salir = true;
+				}
+			} while (*buffer != '*');
 
-	// Leer ocntenido del socket
-	n = read(newsockfd,buffer,255);
+			printf("\nCliente: ");
+			do {
+				recv(newsockfd, buffer, bufsize, 0);
+				printf("%s ", buffer);
+				// cout << buffer << " ";
+				if (*buffer == '#') {
+					*buffer == '*';
+					salir = true;
+				}
+			} while (*buffer != '*');
 
-	if (n < 0)
-		error("ERROR no se pudo leer del socket");
+		} while (!salir);
 
-	printf("El mesnaje del cliente es: %s\n",buffer);
+		printf("\nTerminando conexión con: %s\n", inet_ntoa(cli_addr.sin_addr));
+		close(newsockfd);
+		salir = false;
+		exit(1);
+	}
+
+
+	// printf("server: Se obtuvo conexión exitosa de %s en el puerto %d\n",
+	// 	inet_ntoa(cli_addr.sin_addr), htons(cli_addr.sin_port));
+
+	// // Enviar hola mundo al usuario
+	// send(newsockfd, "Holaa, mundo!\n", 13, 0);
+
+	// // Preparar buffer
+	// bzero(buffer,256);
+
+	// // Leer ocntenido del socket
+	// n = read(newsockfd,buffer,255);
+
+	// if (n < 0)
+	// 	error("ERROR no se pudo leer del socket");
+
+	// printf("El mesnaje del cliente es: %s\n",buffer);
 
 	// Cerrar conexiones	
-	close(newsockfd);
+	// close(newsockfd);
 	close(sockfd);
 	return 0; 
 }
