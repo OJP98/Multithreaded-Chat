@@ -7,9 +7,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-// #include "mensaje.pb.h"
-// using namespace chat;
+#include <sys/syscall.h>
+#include <pthread.h>
+#include <vector> 
 using namespace std;
+// #include "mensaje.pb.h"
+
+#define MAX_CLIENTS 20
+#define BUFSIZE 	1024
+
+// Pa' compilar: g++ -o server server.cpp -lpthread -lns
 
 void error(const char *msg)
 {
@@ -17,15 +24,58 @@ void error(const char *msg)
 	exit(1);
 }
 
+struct connection_data {
+	int cli_socket;
+	int tid;
+	struct sockaddr_in cli_addr;
+	socklen_t cli_len;
+};
+
+void *connectWithClient(void *args)
+{
+	char buffer[BUFSIZE];
+	bool salir = false;
+
+	struct connection_data *data;
+	data = (struct connection_data *) args;
+
+	struct sockaddr_in serv_addr;
+	int cli_socket = data->cli_socket;
+	int tid = data->tid;
+	struct sockaddr_in cli_addr = data->cli_addr;
+	socklen_t cli_len = data -> cli_len;
+
+	if (cli_socket > 0) 
+	{
+		strcpy(buffer, "SERVIDOR CONECTADO!\n");
+		send(cli_socket, buffer, cli_len, 0);
+
+		do {
+			printf("\nCliente: ");
+			recv(cli_socket, buffer, BUFSIZE, 0);
+			printf("%s", buffer);
+			if (*buffer == '#') {
+				printf("\nSERVER: Me pierdes cliente...\nF en el chat amigos\n");
+				salir = true;
+			}
+		} while (*buffer != '#');
+
+
+		printf("Terminando conexión con: %s\n", inet_ntoa(cli_addr.sin_addr));
+		close(cli_socket);
+		salir = false;
+	}
+
+	pthread_exit(NULL);
+}
+
 int main(int argc, char *argv[])
 {
-	int sockfd, newsockfd, portno;
-	socklen_t clilen;
-	bool salir = false;
-	int bufsize = 1024;
-	char buffer[bufsize];
-	struct sockaddr_in serv_addr, cli_addr;
-	int n;
+	int sockfd, portno;
+	struct sockaddr_in serv_addr;
+	vector<pthread_t> threadVector;
+	pthread_t threadPool[MAX_CLIENTS];
+	void * retvals[MAX_CLIENTS];
 
 	if (argc < 2) {
 		fprintf(stderr,"ERROR, no se obtuvo un puerto\n");
@@ -58,97 +108,48 @@ int main(int argc, char *argv[])
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
 		error("ERROR, no se pudo hacer bind");
 
-	// listen() le indica al socket escuchar conexiones.
-	// listen() automaticamente tiene una cola de requests
-	// El máximo, por defecto, es 5.
-	listen(sockfd,SOMAXCONN);
+	if (listen(sockfd, MAX_CLIENTS) == 0)
+		printf("Haciendo listen para nuevos clientes...\n");
+	else
+		error("ERROR, no se pudo hacer listen");
 
-	// Se prepara un espacio para la dirección del cliente
-	clilen = sizeof(cli_addr);
+	int clientCount = 0;
 
-	// Se acepta la conexión con la infromación del cliente en la estructura del cliente.
-	// Retorna un nuevo file descriptor de la conexión aceptada, este se puede seguir usando
-	// para mantener comunicación con el cliente.
-	int cantClientes = 1;
-	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-	if (newsockfd < 0)
-		 error("ERROR, no fue posible aceptar el socket del cliente");
-
-
-	while (newsockfd > 0) 
+	while (clientCount < MAX_CLIENTS)
 	{
-		strcpy(buffer, "SERVIDOR CONECTADO!\n");
-		send(newsockfd, buffer, clilen, 0);
-		cout << "Conectado con el cliente #" << cantClientes << "\n";
-		cout << "Para terminar la conexión, escribir #\n";
+		struct sockaddr_in cli_addr;
+		socklen_t cli_len = sizeof(cli_addr);
 
-		printf("\nCliente: ");
-		do {
-			bzero(buffer, bufsize);
-			recv(newsockfd, buffer, bufsize, 0);
-			printf("%s ", buffer);
-			// cout << buffer << " ";
-			if (*buffer == '#') {
-				*buffer = '*';
-				salir = true;
-			}
-		} while (*buffer != '*');
+        int newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &cli_len);
 
-		do {
-			printf("\n");
-			do {
-				printf("Servidor: ");
-				bzero(buffer, bufsize);
-				fgets(buffer, bufsize, stdin);
-				// cin >> buffer;
-				send(newsockfd, buffer, bufsize, 0);
-				if (*buffer == '#') {
-					send(newsockfd, buffer, bufsize, 0);
-					*buffer = '*';
-					salir = true;
-				}
-			} while (*buffer != '*');
+        if (newsockfd < 0)
+        	error("ERROR, no se pudo establecer conexión con cliente");
+        else
+        {
+            printf("NUEVO CLIENTE ONLINE!\n");
+        }
 
-			printf("\nCliente: ");
-			do {
-				recv(newsockfd, buffer, bufsize, 0);
-				printf("%s ", buffer);
-				// cout << buffer << " ";
-				if (*buffer == '#') {
-					*buffer == '*';
-					salir = true;
-				}
-			} while (*buffer != '*');
+        struct connection_data new_connection;
+        new_connection.cli_socket = newsockfd;
+        new_connection.cli_addr = cli_addr;
+        new_connection.cli_len = cli_len;
+        new_connection.tid = clientCount;
 
-		} while (!salir);
+        pthread_create(
+        	&threadPool[clientCount],
+        	NULL,
+        	connectWithClient,
+        	(void *)&new_connection
+        );
 
-		printf("\nTerminando conexión con: %s\n", inet_ntoa(cli_addr.sin_addr));
-		close(newsockfd);
-		salir = false;
-		exit(1);
+        clientCount++;
 	}
 
-
-	// printf("server: Se obtuvo conexión exitosa de %s en el puerto %d\n",
-	// 	inet_ntoa(cli_addr.sin_addr), htons(cli_addr.sin_port));
-
-	// // Enviar hola mundo al usuario
-	// send(newsockfd, "Holaa, mundo!\n", 13, 0);
-
-	// // Preparar buffer
-	// bzero(buffer,256);
-
-	// // Leer ocntenido del socket
-	// n = read(newsockfd,buffer,255);
-
-	// if (n < 0)
-	// 	error("ERROR no se pudo leer del socket");
-
-	// printf("El mesnaje del cliente es: %s\n",buffer);
-
-	// Cerrar conexiones	
-	// close(newsockfd);
+	for (int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if (pthread_join(threadPool[i], &retvals[i]) < 0)
+			error("No fue posible cerrar el thread pool.");
+	}
 	close(sockfd);
 	return 0; 
 }

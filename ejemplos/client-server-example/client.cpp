@@ -10,6 +10,8 @@
 
 using namespace std;
 
+// Pa' compilar
+#define BUFSIZE 1024
 
 void error(const char *msg)
 {
@@ -23,8 +25,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 	bool salir = false;
-	int bufsize = 1024;
-	char buffer[bufsize];
+	char buffer[BUFSIZE];
 
 	if (argc < 3) {
 	   fprintf(stderr,"usage %s hostname port\n", argv[0]);
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
 		error("ERROR, no se pudo conectar al servidor");
 
 	printf("Esperando confirmación del servidor...\n");
-	recv(sockfd, buffer, bufsize, 0);
+	recv(sockfd, buffer, BUFSIZE, 0);
 	printf("Conexión aceptada!\n\n");
 
 
@@ -64,46 +65,18 @@ int main(int argc, char *argv[])
 		printf("\n");
 		do {
 			printf("Cliente: ");
-			bzero(buffer, bufsize);
-			fgets(buffer, bufsize, stdin);
-			// cin >> buffer;
-			send(sockfd, buffer, bufsize, 0);
+			bzero(buffer, BUFSIZE);
+			fgets(buffer, BUFSIZE, stdin);
+			send(sockfd, buffer, BUFSIZE, 0);
 			if (*buffer == '#') {
-				send(sockfd, buffer, bufsize, 0);
-				*buffer = '*';
-				salir = true;
-			}
-		} while (*buffer != '*');
-
-		printf("\nServidor: ");
-		do {
-			recv(sockfd, buffer, bufsize, 0);
-			printf("%s ", buffer);
-			// cout << buffer << " ";
-			if (*buffer == '#') {
-				*buffer = '*';
+				send(sockfd, buffer, BUFSIZE, 0);
 				salir = true;
 			}
 
-		} while (*buffer != '*');
+		} while (*buffer != '#');
 
 	} while (!salir);
 
-	// printf("Ingrese el mensaje a enviar: ");
-	// bzero(buffer,256);
-	// fgets(buffer,255,stdin);
-	// n = write(sockfd, buffer, strlen(buffer));
-
-	// if (n < 0) 
-	//      error("ERROR, no se pudo escribir al socket");
-
-	// bzero(buffer,256);
-	// n = read(sockfd, buffer, 255);
-
-	// if (n < 0) 
-	//      error("ERROR no se pudo leer del socket");
-
-	// printf("%s\n", buffer);
 	printf("CONEXIÓN TERMINADA\n");
 	close(sockfd);
 	return 0;
