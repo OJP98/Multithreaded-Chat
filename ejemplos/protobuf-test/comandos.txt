@@ -1,0 +1,7 @@
+para compilar el .proto
+protoc -I=. --cpp_out=. mensaje.proto
+
+compilar programa
+
+g++ protobuftest.cpp mensaje.pb.cc -lprotobuf -o protobuftest
+./protobuftest
