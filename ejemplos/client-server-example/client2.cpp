@@ -60,36 +60,29 @@ int main(int argc, char *argv[])
 	recv(sockfd, buffer, BUFSIZE, 0);
 	printf("Conexión aceptada!\n\n");
 
-
 	do {
-		printf("\n");
+		// Recibir mensajes del cliente constantemente
+		bzero(buffer, BUFSIZE);
+		int received = recv(sockfd, buffer, BUFSIZE, 0);
 
-		do {
-			printf("Cliente: ");
-			bzero(buffer, BUFSIZE);
-			fgets(buffer, BUFSIZE, stdin);
+		if (received == -1)
+		{
+			// Mensajes
+			printf("\nCLIENTE - ERROR, no se pudo recibir el mensaje del cliente\n");
+			salir = true;
+		}
 
-			// Quitar el caracter de espacio \n
-			if('\n' == buffer[strlen(buffer) - 1])
-    			buffer[strlen(buffer) - 1] = '\0';
+		else if (received == 0)
+		{
+			// Mensajes
+			printf("\nCLIENTE - Conexión cerrada por parte del cliente.\n");
+			salir = true;
+		}
 
-			send(sockfd, buffer, BUFSIZE, 0);
-
-			if (*buffer == '#') {
-				send(sockfd, buffer, BUFSIZE, 0);
-				salir = true;
-			}
-
-			else if (strcmp(buffer, "privado") == 0)
-			{
-				printf("Ingrese el tid del cliente: ");
-				bzero(buffer, BUFSIZE);
-				fgets(buffer, BUFSIZE, stdin);
-
-				send(sockfd, buffer, BUFSIZE, 0);
-			}
-
-		} while (*buffer != '#');
+		else
+		{
+			printf("PRIVADO: %s\n", buffer);
+		}
 
 	} while (!salir);
 

@@ -9,14 +9,23 @@
 #include <arpa/inet.h>
 #include <sys/syscall.h>
 #include <pthread.h>
-#include <vector> 
+#include <map>
 using namespace std;
+
 // #include "mensaje.pb.h"
+#include "thread.h"
 
 #define MAX_CLIENTS 20
 #define BUFSIZE 	1024
 
-// Pa' compilar: g++ -o server server.cpp -lpthread -lns
+// Unas variables útiles
+int sockfd, portno, clientCount;
+struct sockaddr_in serv_addr;
+pthread_t threadPool[MAX_CLIENTS];
+void * retvals[MAX_CLIENTS];
+
+// Diccionario de sockets
+std::map<int, int> Clithread::dict = {};
 
 void error(const char *msg)
 {
@@ -24,63 +33,34 @@ void error(const char *msg)
 	exit(1);
 }
 
+// Estructura para manejar datos de conexión
 struct connection_data {
-	int cli_socket;
+	int socket;
 	int tid;
-	struct sockaddr_in cli_addr;
-	socklen_t cli_len;
+	struct sockaddr_in addr;
 };
 
-void *connectWithClient(void *args)
-{
-	char buffer[BUFSIZE];
-	bool salir = false;
 
-	struct connection_data *data;
+void *manageNewThread(void *args)
+{
+	connection_data *data;
 	data = (struct connection_data *) args;
 
-	struct sockaddr_in serv_addr;
-	int cli_socket = data->cli_socket;
-	int tid = data->tid;
-	struct sockaddr_in cli_addr = data->cli_addr;
-	socklen_t cli_len = data -> cli_len;
+	Clithread clithread(
+		data->socket,
+		data->tid,
+		data->addr,
+		clientCount
+	);
 
-	if (cli_socket > 0) 
-	{
-		strcpy(buffer, "SERVIDOR CONECTADO!\n");
-		send(cli_socket, buffer, cli_len, 0);
+	clithread.ConnectWithClient();
 
-		do {
-			printf("\nCliente: ");
-			recv(cli_socket, buffer, BUFSIZE, 0);
-			printf("%s", buffer);
-			if (*buffer == '#') {
-				printf("\nSERVER: Me pierdes cliente...\nF en el chat amigos\n");
-				salir = true;
-			}
-		} while (*buffer != '#');
-
-
-		printf("Terminando conexión con: %s\n", inet_ntoa(cli_addr.sin_addr));
-		close(cli_socket);
-		salir = false;
-	}
-
+	clientCount--;
 	pthread_exit(NULL);
 }
 
-int main(int argc, char *argv[])
+void Initialize()
 {
-	int sockfd, portno;
-	struct sockaddr_in serv_addr;
-	vector<pthread_t> threadVector;
-	pthread_t threadPool[MAX_CLIENTS];
-	void * retvals[MAX_CLIENTS];
-
-	if (argc < 2) {
-		fprintf(stderr,"ERROR, no se obtuvo un puerto\n");
-		exit(1);
-	}
 	// Crear un socket
 	// socket(int domain, int type, int protocol)
 	sockfd =  socket(AF_INET, SOCK_STREAM, 0);
@@ -89,8 +69,6 @@ int main(int argc, char *argv[])
 
 	// Liberar memoria para obtener address de usuario
 	bzero((char *) &serv_addr, sizeof(serv_addr));
-
-	portno = atoi(argv[1]);
 
 	/* setup de la dirección del host (host_addr) al hacer el bind de la llamada */
 	serv_addr.sin_family = AF_INET;  
@@ -109,12 +87,13 @@ int main(int argc, char *argv[])
 		error("ERROR, no se pudo hacer bind");
 
 	if (listen(sockfd, MAX_CLIENTS) == 0)
-		printf("Haciendo listen para nuevos clientes...\n");
+		printf("SERVER - Haciendo listen para nuevos clientes...\n");
 	else
 		error("ERROR, no se pudo hacer listen");
+}
 
-	int clientCount = 0;
-
+void ListenForConnections()
+{
 	while (clientCount < MAX_CLIENTS)
 	{
 		struct sockaddr_in cli_addr;
@@ -126,30 +105,49 @@ int main(int argc, char *argv[])
         	error("ERROR, no se pudo establecer conexión con cliente");
         else
         {
-            printf("NUEVO CLIENTE ONLINE!\n");
+            printf("\nSERVER - ¡Nuevo cliente online!\n");
         }
 
         struct connection_data new_connection;
-        new_connection.cli_socket = newsockfd;
-        new_connection.cli_addr = cli_addr;
-        new_connection.cli_len = cli_len;
+        new_connection.socket = newsockfd;
+        new_connection.addr = cli_addr;
         new_connection.tid = clientCount;
 
         pthread_create(
         	&threadPool[clientCount],
         	NULL,
-        	connectWithClient,
+        	manageNewThread,
         	(void *)&new_connection
         );
 
         clientCount++;
 	}
+}
 
+void CloseServer()
+{
 	for (int i = 0; i < MAX_CLIENTS; ++i)
 	{
 		if (pthread_join(threadPool[i], &retvals[i]) < 0)
 			error("No fue posible cerrar el thread pool.");
 	}
 	close(sockfd);
+}
+
+int main(int argc, char *argv[])
+{
+	// Verificar si se obtuvo argumento o no
+	if (argc < 2) {
+		fprintf(stderr,"ERROR, no se obtuvo un puerto\n");
+		exit(1);
+	}
+
+	// Convertir el argumento (puerto) a entero.
+	portno = atoi(argv[1]);
+
+	Initialize();
+	ListenForConnections();
+	CloseServer();
+
 	return 0; 
 }
