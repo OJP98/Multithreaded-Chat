@@ -1,15 +1,25 @@
 #include <iostream>
 #include <string>
-#include <time.h> 
+#include <time.h>
 
 #include "Usuario.h"
 
 using namespace std;
 
-Usuario::Usuario(string nombreN, string ipN)
+Usuario::Usuario(string userN, string ipN, int socketN)
 {
-	nombre=nombreN;
-	ip=ipN;
+	user = userN;
+	ip = ipN;
+	socket = socketN;
+	estado = 1;
+}
+
+Usuario::Usuario()
+{
+	user = "0";
+	ip = "0";
+	socket = 0;
+	estado = 0;
 }
 
 time_t Usuario::GetHoraUltimoMensaje()
@@ -37,7 +47,7 @@ string Usuario::GetEstado()
 string Usuario::Info()
 {
 	string info;
-	info="Usuario: \t"+nombre+" \nIp: \t\t"+ip+"\nEstado: \t"+Usuario::GetEstado()+"\n";
+	info="Usuario: \t"+user+" \nIp: \t\t"+ip+"\nEstado: \t"+Usuario::GetEstado()+"\n";
 	return info;
 
 }

@@ -9,23 +9,16 @@
 #include <map>
 
 #include "thread.h"
+#include "../../cliente/Usuario.h"
 
 using namespace std;
 
-Clithread::Clithread(
-	int socketN,
-	int tidN,
-	struct sockaddr_in addrN,
-	int clientCountN
-	)
+Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 {
 	socket = socketN;
-	tid = tidN;
+	cid = cidN;
 	addr = addrN;
 	len = sizeof(addr);
-
-	clientCount=&clientCountN;
-
 	closeConnection = false;
 }
 
@@ -43,8 +36,11 @@ void Clithread::ConnectWithClient()
 	else
 	{
 		printf("SERVER - Conexión con nuevo cliente establecida.\n");
-		AddToMap();
-		ManageClient();
+
+		if (RegisterUser() > 0)
+		{
+			ManageClient();
+		}
 	}
 }
 
@@ -59,6 +55,10 @@ void Clithread::ManageClient()
 
 		if (received > 0)
 		{
+			// Quitar el caracter de espacio \n
+			if('\n' == buffer[strlen(buffer) - 1])
+				buffer[strlen(buffer) - 1] = '\0';
+
 			if (*buffer == '#') {
 				printf("\nSERVER - Me pierdes cliente...\nSERVER - F en el chat amigos\n");
 				closeConnection = true;
@@ -92,13 +92,23 @@ void Clithread::SendPrivateMessage()
 
 	if (received > 0)
 	{
-		// value = m.at(key)
-		if (dict.find(atoi(buffer)) != dict.end()) {
-			// Buscar en el diccionario por socket relacionado a ip del cliente
-			int cli_socket = dict[atoi(buffer)];
+		// Quitar el caracter de espacio \n
+		if('\n' == buffer[strlen(buffer) - 1])
+			buffer[strlen(buffer) - 1] = '\0';
+
+		int destUserId = GetUsernameId(buffer);
+
+		if (destUserId >= 0)
+		{
+			Usuario destUser = dict[destUserId];
+
 			bzero(buffer, BUFSIZE);
 			strcpy(buffer, "MENSAJE PRIVADO DE PARTE DE ALGUIEN...\n");
-			send(cli_socket, buffer, BUFSIZE, 0);
+			send(destUser.socket, buffer, BUFSIZE, 0);
+		}
+		else
+		{
+			printf("ALGUIEN DIGALE A ESTE PENDEJO QUE ESE USUARIO NO EXISTE!\n");
 		}
 	}
 
@@ -107,11 +117,104 @@ void Clithread::SendPrivateMessage()
 }
 
 
+/* FUNCIONES RELACIONADAS AL MAP */
+void Clithread::GetMap()
+{
+	printf("LA LISTA DE USUARIOS CONECTADOS ES:\n");
+	map<int, Usuario>::iterator itr; 
+	cout << "\tUSERNAME\tESTADO\n"; 
+    for (itr = dict.begin(); itr != dict.end(); ++itr) { 
+
+		int userId = itr->first;
+		Usuario u = itr->second;
+
+        cout << '\t' << u.user
+             << '\t' << '\t' << u.estado << '\n'; 
+    } 
+    cout << endl;
+
+}
+
+
+void Clithread::AddToMap(Usuario newUser)
+{
+	dict.insert(pair<int, Usuario>(cid, newUser));
+}
+
+
+int Clithread::GetUsernameId(string username)
+{
+    map<int, Usuario>::iterator itr;
+	for (itr = dict.begin(); itr != dict.end(); ++itr)
+	{
+		// Se itera todos los id's y usuarios en el diccionario
+		int userId = itr->first;
+		Usuario u = itr->second;
+
+		cout << "COMPARANDO " << u.user << " CON " << username << endl;
+
+		// Se compara el nombre del usuario con el parámetro
+		if (u.user.compare(username) == 0)
+			return userId;
+	}
+	return -1;
+}
+
+
+int Clithread::RegisterUser()
+{
+	// TODO: Hacer el three way handshake
+
+	string username = to_string(socket);
+	string ip = to_string(cid);
+
+	if (!UsernameExists(username) && !IpExists(ip))
+	{
+		Usuario newUser(username, ip, socket);
+		AddToMap(newUser);
+		return 1;
+	}
+	else
+	{
+		printf("IP O USERNAME YA EXISTEN\n");
+		EndConnection();
+		return 0;
+	}
+}
+
+
+bool Clithread::UsernameExists(string username)
+{
+	map<int, Usuario>::iterator itr;
+	for (itr = dict.begin(); itr != dict.end(); ++itr)
+	{
+		Usuario u = itr->second;
+		if (u.user.compare(username) == 0)
+			return true;
+	}
+	return false;
+}
+
+
+bool Clithread::IpExists(string ip)
+{
+	map<int, Usuario>::iterator itr;
+	for (itr = dict.begin(); itr != dict.end(); ++itr)
+	{
+		Usuario u = itr->second;
+		if (u.ip.compare(ip) == 0)
+			return true;
+	}
+	return false;
+}
+
+
+/* MANEJO DE ERRORES Y CIERRE DE CONEXIÓN */
 void Clithread::EndConnection()
 {
 	printf("SERVER - Terminando conexión con: %s, socket %d\n", inet_ntoa(addr.sin_addr), socket);
-	// Eliminar usuario del map
-	dict.erase(tid);
+	// Eliminar usuario del map si existe
+	dict.erase(cid);
 	// Cerrar socket
 	close(socket);
 }
@@ -141,24 +244,4 @@ void Clithread::error(const char *msg)
 {
 	perror(msg);
 	exit(0);
-}
-
-
-void Clithread::GetMap()
-{
-	printf("EL MAP AL CONECTAR CON CLIENTE ES:\n");
-	map<int, int>::iterator itr; 
-	cout << "\tTID\tSOCKET\n"; 
-    for (itr = dict.begin(); itr != dict.end(); ++itr) { 
-        cout << '\t' << itr->first 
-             << '\t' << itr->second << '\n'; 
-    } 
-    cout << endl;
-
-}
-
-
-void Clithread::AddToMap()
-{
-	dict.insert(pair<int, int>(tid, socket));
 }

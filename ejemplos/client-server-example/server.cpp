@@ -14,18 +14,25 @@ using namespace std;
 
 // #include "mensaje.pb.h"
 #include "thread.h"
+#include "../../cliente/Usuario.h"
 
 #define MAX_CLIENTS 20
 #define BUFSIZE 	1024
 
 // Unas variables útiles
-int sockfd, portno, clientCount;
+int sockfd, portno;
+int clientCount = 0;
+int idCount = 0;
 struct sockaddr_in serv_addr;
 pthread_t threadPool[MAX_CLIENTS];
 void * retvals[MAX_CLIENTS];
 
-// Diccionario de sockets
-std::map<int, int> Clithread::dict = {};
+Usuario nuevoUsuario("TEST","69.0.0.1",69);
+
+// Diccionario de usuarios
+std::map<int, Usuario> Clithread::dict = {
+	{69, nuevoUsuario}
+};
 
 void error(const char *msg)
 {
@@ -36,7 +43,7 @@ void error(const char *msg)
 // Estructura para manejar datos de conexión
 struct connection_data {
 	int socket;
-	int tid;
+	int cid;
 	struct sockaddr_in addr;
 };
 
@@ -48,9 +55,8 @@ void *manageNewThread(void *args)
 
 	Clithread clithread(
 		data->socket,
-		data->tid,
-		data->addr,
-		clientCount
+		data->cid,
+		data->addr
 	);
 
 	clithread.ConnectWithClient();
@@ -111,7 +117,7 @@ void ListenForConnections()
         struct connection_data new_connection;
         new_connection.socket = newsockfd;
         new_connection.addr = cli_addr;
-        new_connection.tid = clientCount;
+        new_connection.cid = idCount;
 
         pthread_create(
         	&threadPool[clientCount],
@@ -121,6 +127,7 @@ void ListenForConnections()
         );
 
         clientCount++;
+        idCount++;
 	}
 }
 

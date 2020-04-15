@@ -69,10 +69,6 @@ int main(int argc, char *argv[])
 			bzero(buffer, BUFSIZE);
 			fgets(buffer, BUFSIZE, stdin);
 
-			// Quitar el caracter de espacio \n
-			if('\n' == buffer[strlen(buffer) - 1])
-    			buffer[strlen(buffer) - 1] = '\0';
-
 			send(sockfd, buffer, BUFSIZE, 0);
 
 			if (*buffer == '#') {
@@ -85,7 +81,6 @@ int main(int argc, char *argv[])
 				printf("Ingrese el tid del cliente: ");
 				bzero(buffer, BUFSIZE);
 				fgets(buffer, BUFSIZE, stdin);
-
 				send(sockfd, buffer, BUFSIZE, 0);
 			}
 
