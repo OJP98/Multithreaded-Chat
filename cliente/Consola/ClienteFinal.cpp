@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <ncurses.h>
 #include <unistd.h>
+#include <pthread.h>
 
 
 #include <iostream>
@@ -200,8 +201,18 @@ void HacerMenuPrincipal(int opcion)
 
 }
 
+void *spammer(void *arg){
+	int i=1;
+	while(i<100000){
+		nuevoMensaje("TU NANA","Hola Mundo");
+		sleep(5);
+		i++;
+	}
+}
 
 int main() {
+	pthread_t hilo1;
+	pthread_create(&hilo1,NULL,spammer,NULL);
     char buf[100] = {0}, *s = buf;
 
     int ch, cnt = 0, n = 1;
@@ -329,5 +340,6 @@ int main() {
  
     delwin(w);
     endwin();
+    pthread_join(hilo1,NULL);
     return 0;
 }
