@@ -14,9 +14,9 @@
 #include <pthread.h>
 #include <map>
 
-using namespace std;
 #include "../../cliente/Usuario.h"
 
+using namespace std;
 #define BUFSIZE 1024
 
 class Clithread
@@ -33,12 +33,17 @@ public:
 
 	// Métodos de conexión cliente-servidor
 	void ConnectWithClient();
-	int RegisterUser();
+	int RegisterUser(Usuario newUser);
 	void ManageClient();
 	void EndConnection();
 
-	// Métodos de comunicación cliente - cliente
-	void SendPrivateMessage();
+	// Métodos de google protobuf
+	void ManageProtoOption();
+	void ThreeWayHandshake(string username, string ip);
+	void SendConnectedUsers(int userId, string username);
+	void ChangeUserStatus(string newStatus);
+	void BroadcastMessage(string message);
+	void SendPrivateMessage(string message, int userId, string username);
 
 	// Métodos relacionados al diccionario
 	void GetMap();

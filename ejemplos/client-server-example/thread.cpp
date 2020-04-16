@@ -9,9 +9,12 @@
 #include <map>
 
 #include "thread.h"
+#include "mensaje.pb.h"
 #include "../../cliente/Usuario.h"
 
 using namespace std;
+using namespace chat;
+using namespace google::protobuf;
 
 Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 {
@@ -20,33 +23,29 @@ Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 	addr = addrN;
 	len = sizeof(addr);
 	closeConnection = false;
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
 
-
+/* METODOS DE CONEXIÓN CON EL CLIENTE */
 void Clithread::ConnectWithClient()
 {
-	strcpy(buffer, "SERVIDOR CONECTADO!\n");
-	int sent = send(socket, buffer, len, 0);
 
-	if (sent == 0)
+	// Recibir mensajes del cliente conectado
+	bzero(buffer, BUFSIZE);
+	int received = recv(socket, buffer, BUFSIZE, 0);
+
+	if (received > 0)
 	{
-		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
-		EndConnection();
+		ManageProtoOption();
 	}
 	else
-	{
-		printf("SERVER - Conexión con nuevo cliente establecida.\n");
-
-		if (RegisterUser() > 0)
-		{
-			ManageClient();
-		}
-	}
+		ManageRecvError(received);
 }
 
 
 void Clithread::ManageClient()
 {
+	printf("ENTRANDO A MANAGE CLIENT!\n");
 	while (socket > 0 && !closeConnection)
 	{
 		// Recibir mensajes del cliente constantemente
@@ -55,6 +54,7 @@ void Clithread::ManageClient()
 
 		if (received > 0)
 		{
+
 			// Quitar el caracter de espacio \n
 			if('\n' == buffer[strlen(buffer) - 1])
 				buffer[strlen(buffer) - 1] = '\0';
@@ -68,7 +68,7 @@ void Clithread::ManageClient()
 			{
 				printf("SERVER - Alguien está enviando un mensaje privado...\n");
 				GetMap();
-				SendPrivateMessage();
+				// SendPrivateMessage();
 			}
 			else
 			{
@@ -83,8 +83,131 @@ void Clithread::ManageClient()
 	EndConnection();
 }
 
+void Clithread::ManageProtoOption()
+{
+	printf("SERVER - Evaluando opciones del client message\n");
+	string ret(buffer, BUFSIZE);
 
-void Clithread::SendPrivateMessage()
+	ClientMessage cm;
+	cm.ParseFromString(buffer);
+	int32 option = cm.option();
+	printf("SERVER - Se obtuvo opción por parte del cliente\n");
+
+	// MY INFO SYNCHRONIZE
+	if(option == 1)
+	{
+		string cm_username = cm.synchronize().username();
+		string cm_ip = cm.synchronize().ip();
+		printf("SERVER - La opción es 1! synchronize con user e ip\n");
+		// if (cm_ip != '')
+			// cm_ip = inet_ntoa(addr.sin_addr);
+
+		ThreeWayHandshake(cm_username, cm_ip);
+	}
+
+	// CONNECTED USERS
+	else if(option == 2)
+	{
+		int cm_userId = cm.connectedusers().userid();
+  		string cm_username = cm.connectedusers().username();
+
+		SendConnectedUsers(cm_userId, cm_username);
+	}
+
+	// CHANGE STATUS
+	else if(option == 3)
+	{
+		string cm_status = cm.changestatus().status();
+		ChangeUserStatus(cm_status);
+	}
+
+	// BROADCAST
+	else if(option == 4)
+	{
+		string cm_message = cm.broadcast().message();
+		BroadcastMessage(cm_message);
+	}
+
+	// DIRECT MESSAGE
+	else if(option == 5)
+	{
+		string cm_message = cm.directmessage().message();
+		int cm_userId = cm.directmessage().userid();
+		string cm_username = cm.directmessage().username();
+		SendPrivateMessage(cm_message, cm_userId, cm_username);
+	}
+
+}
+
+
+void Clithread::ThreeWayHandshake(string username, string ip = "")
+{
+	printf("SERVER - Entrando al ThreeWayHandshake\n");
+	// Preparar mensaje de respuesta
+	MyInfoResponse myInfo;
+	myInfo.set_userid(cid);
+
+	string binary;
+	myInfo.SerializeToString(&binary);
+
+	char cstr[binary.size() + 1];
+    strcpy(cstr, binary.c_str());
+
+	// Enviar el mensaje serializado al cliente.
+	int sent = send(socket, cstr, strlen(cstr), 0);
+	if (sent == 0)
+	{
+		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+		EndConnection();
+	}
+
+	printf("SERVER - El id fue entregado al cliente\n");
+
+	// Ahora le toca al servidor esperar la respuesta del cliente
+	// ... recibir mensajes del cliente
+	bzero(buffer, BUFSIZE);
+	int received = recv(socket, buffer, BUFSIZE, 0);
+
+	if (received > 0)
+	{
+		printf("SERVER - Se logra recibir acknowledge del cliente\n");
+		// Deserealizar el acknowledge
+		MyInfoAcknowledge ack;
+		ack.ParseFromString(buffer);
+
+		// Comprobar que el user id sea el mismo y luego
+		// intentar registrar al usuario
+		if (ack.userid() == cid)
+		{
+			Usuario newUser(username, ip, socket);
+			if(RegisterUser(newUser) > 0)
+				ManageClient();
+		}
+	}
+
+
+	else
+		ManageRecvError(received);
+
+}
+
+void Clithread::SendConnectedUsers(int userId = 0, string username = "")
+{
+	// TODO: Handshake
+}
+
+void Clithread::ChangeUserStatus(string newStatus)
+{
+	// TODO: Handshake
+}
+
+void Clithread::BroadcastMessage(string message)
+{
+	// TODO: Handshake
+}
+
+
+void Clithread::SendPrivateMessage(string message, int userId, string username)
 {
 	// Recibir mensajes del cliente constantemente
 	bzero(buffer, BUFSIZE);
@@ -108,6 +231,7 @@ void Clithread::SendPrivateMessage()
 		}
 		else
 		{
+			// TODO: Indicarle al usuario que ese usuario no existe
 			printf("ALGUIEN DIGALE A ESTE PENDEJO QUE ESE USUARIO NO EXISTE!\n");
 		}
 	}
@@ -139,6 +263,8 @@ void Clithread::GetMap()
 void Clithread::AddToMap(Usuario newUser)
 {
 	dict.insert(pair<int, Usuario>(cid, newUser));
+	printf("SERVER - Usuario agregado al diccionario!\n");
+	GetMap();
 }
 
 
@@ -151,8 +277,6 @@ int Clithread::GetUsernameId(string username)
 		int userId = itr->first;
 		Usuario u = itr->second;
 
-		cout << "COMPARANDO " << u.user << " CON " << username << endl;
-
 		// Se compara el nombre del usuario con el parámetro
 		if (u.user.compare(username) == 0)
 			return userId;
@@ -161,16 +285,11 @@ int Clithread::GetUsernameId(string username)
 }
 
 
-int Clithread::RegisterUser()
+int Clithread::RegisterUser(Usuario newUser)
 {
-	// TODO: Hacer el three way handshake
-
-	string username = to_string(socket);
-	string ip = to_string(cid);
-
-	if (!UsernameExists(username) && !IpExists(ip))
+	if (!UsernameExists(newUser.user) && !IpExists(newUser.ip))
 	{
-		Usuario newUser(username, ip, socket);
+		printf("SERVER - El usuario no está registrado, agregando al map.\n");
 		AddToMap(newUser);
 		return 1;
 	}

@@ -26,7 +26,7 @@ message MyInfoAcknowledge {
 // ------------------------------------------------------
 
 
-// --------- LISTADO DE USUARIOS CONECTADOS e OBETENCION DE INFORMACION DE USUARIO ---------
+// --------- LISTADO DE USUARIOS CONECTADOS y OBETENCION DE INFORMACION DE USUARIO ---------
 
 // Sent from CLIENT
 // IF userId 0 RETURN ALL CONNECTED USERS
@@ -141,11 +141,6 @@ message ClientMessage {
 // option 1: broadcast
 // option 2: message
 // option 3: error
-// option 4: myInfoResponse
-// option 5: connectedUserResponse
-// option 6: changeStatusResponse
-// option 7: broadcastResponse (sent message status)
-// option 8: directMessageResponse (sent message status)
 message ServerMessage {
   required int32 option = 1;
 
@@ -154,14 +149,4 @@ message ServerMessage {
   optional DirectMessage message = 3;
 
   optional ErrorResponse error = 4;
-  
-  optional MyInfoResponse myInfoResponse = 5;
-  
-  optional ConnectedUserResponse connectedUserResponse = 6;
-  
-  optional ChangeStatusResponse changeStatusResponse = 7;
-  
-  optional BroadcastResponse broadcastResponse = 8;
-  
-  optional DirectMessageResponse directMessageResponse = 9;
 }

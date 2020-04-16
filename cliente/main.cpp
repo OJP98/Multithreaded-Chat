@@ -2,6 +2,7 @@
 #include <string>
 #include <time.h> 
 #include <vector> 
+#include "mensaje.pb.h"
 
 #include "Usuario.h"
 

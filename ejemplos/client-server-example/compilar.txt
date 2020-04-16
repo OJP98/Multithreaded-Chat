@@ -1,1 +1,5 @@
-g++ -o server server.cpp thread.cpp ../../cliente/Usuario.cpp -lpthread
+servidor:
+g++ -o server server.cpp thread.cpp mensaje.pb.cc ../../cliente/Usuario.cpp -lpthread -lprotobuf
+
+cliente:
+g++ -o client client.cpp mensaje.pb.cc -lprotobuf

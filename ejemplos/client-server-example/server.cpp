@@ -111,7 +111,7 @@ void ListenForConnections()
         	error("ERROR, no se pudo establecer conexión con cliente");
         else
         {
-            printf("\nSERVER - ¡Nuevo cliente online!\n");
+            printf("\nSERVER - Nuevo cliente conectándose...\n");
         }
 
         struct connection_data new_connection;
