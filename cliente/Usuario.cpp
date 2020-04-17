@@ -11,7 +11,7 @@ Usuario::Usuario(string userN, string ipN, int socketN)
 	user = userN;
 	ip = ipN;
 	socket = socketN;
-	estado = 1;
+	estado = "ACTIVO";
 }
 
 Usuario::Usuario()
@@ -19,7 +19,7 @@ Usuario::Usuario()
 	user = "0";
 	ip = "0";
 	socket = 0;
-	estado = 1;
+	estado = "ACTIVO";
 }
 
 time_t Usuario::GetHoraUltimoMensaje()
@@ -35,12 +35,12 @@ void Usuario::SetHoraUltimoMensaje(time_t nuevaHora)
 string Usuario::GetEstado()
 {
 
-	if(estado==1)
-		return "Activo";
-	else if (estado==2)
-		return "Ocupado";
-	else
-		return "Inactivo";
+	// if(estado=='ACTIVO')
+	// 	return "Activo";
+	// else if (estado=='OCUPADO')
+	// 	return "Ocupado";
+	// else
+	// 	return "Inactivo";
 
 }
 

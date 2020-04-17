@@ -3,3 +3,6 @@ g++ -o server server.cpp thread.cpp mensaje.pb.cc ../../cliente/Usuario.cpp -lpt
 
 cliente:
 g++ -o client client.cpp mensaje.pb.cc -lprotobuf
+
+mensaje.proto:
+protoc -I=. --cpp_out=. mensaje.proto

@@ -115,6 +115,7 @@ void Clithread::ManageProtoOption()
 	else if(option == 3)
 	{
 		string cm_status = cm.changestatus().status();
+		printf("SERVER - La opción es 3! Cambiar de status\n");
 		ChangeUserStatus(cm_status);
 	}
 
@@ -148,11 +149,16 @@ void Clithread::ManageProtoOption()
 void Clithread::Synchronize(string username, string ip = "")
 {
 	// Preparar mensaje de respuesta
-	MyInfoResponse myInfo;
-	myInfo.set_userid(cid);
+
+	MyInfoResponse * infoResponse(new MyInfoResponse);
+	infoResponse->set_userid(cid);
+
+	ServerMessage sm;
+	sm.set_option(4);
+	sm.set_allocated_myinforesponse(infoResponse);
 
 	string binary;
-	myInfo.SerializeToString(&binary);
+	sm.SerializeToString(&binary);
 
 	char cstr[binary.size() + 1];
     strcpy(cstr, binary.c_str());
@@ -181,7 +187,30 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 
 void Clithread::ChangeUserStatus(string newStatus)
 {
-	// TODO: usar ChangeStatusResponse
+	cout << "SERVER - Se actualizo el estado de " << dict[cid].estado << " a " << newStatus << endl;
+	dict[cid].estado = newStatus;
+
+	ChangeStatusResponse * response(new ChangeStatusResponse);
+	response->set_userid(cid);
+	response->set_status(dict[cid].estado);
+
+	ServerMessage sm;
+	sm.set_option(6);
+	sm.set_allocated_changestatusresponse(response);
+
+	string binary;
+	sm.SerializeToString(&binary);
+
+	char cstr[binary.size() + 1];
+    strcpy(cstr, binary.c_str());
+
+	// Enviar el mensaje serializado al cliente.
+	int sent = send(socket, cstr, strlen(cstr), 0);
+	if (sent == 0)
+	{
+		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+		closeConnection = true;	
+	}
 }
 
 

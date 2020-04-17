@@ -18,7 +18,7 @@ public:
 	time_t GetHoraUltimoMensaje();
 	void SetHoraUltimoMensaje(time_t nuevaHora);
 	string user;
-	int estado;
+	string estado;
 	int socket;
 	string ip;
 		

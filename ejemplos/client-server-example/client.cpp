@@ -61,7 +61,17 @@ int main(int argc, char *argv[])
 		error("ERROR, no se pudo conectar al servidor");
 
 
-	/*  ENVIAR MENSAJE AL SERVIDOR */
+
+
+
+
+	/* THREE-WAY-HANDSHAKE */
+
+
+
+
+
+	//			1. SOLICITAR SINCRONIZACION DE INFO
 
 	// Se crea instacia tipo MyInfoSynchronize y se setean los valores deseables
 	MyInfoSynchronize * miInfo(new MyInfoSynchronize);
@@ -84,29 +94,110 @@ int main(int argc, char *argv[])
 
 	printf("Esperando confirmación del servidor...\n");
 
+
+	// 			2. ESPERAR RESPUESTA DE SINCRONIZACIÓN
+
 	// Recibir mensajes del cliente conectado
 	bzero(buffer, BUFSIZE);
 	recv(sockfd, buffer, BUFSIZE, 0);
 
-	string ret(buffer, 8192);
-	MyInfoResponse myInfo;
-	myInfo.ParseFromString(buffer);
-	userId = myInfo.userid();
+	if (1)
+	{
 
-	cout << "MY ID ES: " << userId << endl;
+		string ret(buffer, BUFSIZE);
+	}
+	ServerMessage sm;
+	sm.ParseFromString(buffer);
+	int option = sm.option();
+
+	// MANEJAR MY INFO RESPONSE
+	if (option == 4)
+	{
+		userId = sm.myinforesponse().userid();
+		cout << "MY ID ES: " << userId << endl;
+
+
+		// 			3. HACER SABER AL SERVIDOR QUE ESTAMOS LISTOS
+
+		// Se crea instancia tipo MyInfoAcknowledge
+		MyInfoAcknowledge * ack(new MyInfoAcknowledge);
+		ack->set_userid(userId);
+
+		// Se crea instancia de Mensaje, se setea los valores deseados
+		ClientMessage m2;
+		m2.set_option(6);
+		m2.set_allocated_acknowledge(ack);
+
+		// Se serializa el message a string
+		string binary2;
+		m2.SerializeToString(&binary2);
+
+		char cstr2[binary2.size() + 1];
+	    strcpy(cstr2, binary2.c_str());
+
+		send(sockfd, cstr2, strlen(cstr2), 0);
+
+	}
+
+
+
+
+
+	sleep(5);
+
+
+	// A PARTIR DE AQUÍ, VERIFICAR OPCIÓN QUE QUIERA ENVIAR
+	// EL USUARIO AL SERVIDOR
+
+	// EJEMPLO: CAMBIAR DE ESTADO
+
 
 	// Se crea instancia de Mensaje, se setea los valores deseados
-	MyInfoAcknowledge ack;
-	ack.set_userid(userId);
+	ChangeStatusRequest * statusRequest(new ChangeStatusRequest);
+	statusRequest->set_status("OCUPADO");
+
+	ClientMessage m3;
+	m3.set_option(3);
+	m3.set_allocated_changestatus(statusRequest);
 
 	// Se serializa el message a string
-	string binary2;
-	ack.SerializeToString(&binary2);
+	string binary3;
+	m3.SerializeToString(&binary3);
 
-	char cstr2[binary2.size() + 1];
-    strcpy(cstr2, binary2.c_str());
+	char cstr3[binary3.size() + 1];
+    strcpy(cstr3, binary3.c_str());
 
-	send(sockfd, cstr2, strlen(cstr2), 0);
+	send(sockfd, cstr3, strlen(cstr3), 0);
+
+	printf("Esperando confirmación del servidor...\n");
+
+	char buffer2[BUFSIZE];
+	// Esperar respuesta del servidor
+	bzero(buffer2, BUFSIZE);
+	recv(sockfd, buffer2, BUFSIZE, 0);
+
+	string ret(buffer2, BUFSIZE);
+	ServerMessage sm2;
+	sm2.ParseFromString(buffer2);
+	int option2 = sm2.option();
+
+	// MANEJAR MY INFO RESPONSE
+	if (option2 == 6)
+	{
+		string userStatus = sm2.changestatusresponse().status();
+		cout << "MY NUEVO STATUS ES: " << userStatus << endl;
+	}
+
+
+
+
+
+
+
+
+
+
+
 
 
 	do {
