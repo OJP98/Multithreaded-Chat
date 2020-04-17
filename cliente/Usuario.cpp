@@ -19,7 +19,7 @@ Usuario::Usuario()
 	user = "0";
 	ip = "0";
 	socket = 0;
-	estado = 0;
+	estado = 1;
 }
 
 time_t Usuario::GetHoraUltimoMensaje()

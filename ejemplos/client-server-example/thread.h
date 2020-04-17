@@ -39,11 +39,13 @@ public:
 
 	// Métodos de google protobuf
 	void ManageProtoOption();
-	void ThreeWayHandshake(string username, string ip);
+	void Synchronize(string username, string ip);
 	void SendConnectedUsers(int userId, string username);
 	void ChangeUserStatus(string newStatus);
 	void BroadcastMessage(string message);
 	void SendPrivateMessage(string message, int userId, string username);
+	void SendError(int userId);
+	void AcknowledgeFromClient(int userId);
 
 	// Métodos relacionados al diccionario
 	void GetMap();

@@ -45,7 +45,7 @@ void Clithread::ConnectWithClient()
 
 void Clithread::ManageClient()
 {
-	printf("ENTRANDO A MANAGE CLIENT!\n");
+	printf("SERVER - Ahora a escuchar al cliente\n\n");
 	while (socket > 0 && !closeConnection)
 	{
 		// Recibir mensajes del cliente constantemente
@@ -54,10 +54,6 @@ void Clithread::ManageClient()
 
 		if (received > 0)
 		{
-
-			// Quitar el caracter de espacio \n
-			if('\n' == buffer[strlen(buffer) - 1])
-				buffer[strlen(buffer) - 1] = '\0';
 
 			if (*buffer == '#') {
 				printf("\nSERVER - Me pierdes cliente...\nSERVER - F en el chat amigos\n");
@@ -70,10 +66,10 @@ void Clithread::ManageClient()
 				GetMap();
 				// SendPrivateMessage();
 			}
+
 			else
 			{
-				printf("\nCliente %d: ", socket);
-				printf("%s\n", buffer);
+				ManageProtoOption();
 			}
 		}
 		else
@@ -83,6 +79,8 @@ void Clithread::ManageClient()
 	EndConnection();
 }
 
+
+/* METODOS RELACIONADOS CON EL PROTOCOLO */
 void Clithread::ManageProtoOption()
 {
 	printf("SERVER - Evaluando opciones del client message\n");
@@ -91,7 +89,6 @@ void Clithread::ManageProtoOption()
 	ClientMessage cm;
 	cm.ParseFromString(buffer);
 	int32 option = cm.option();
-	printf("SERVER - Se obtuvo opción por parte del cliente\n");
 
 	// MY INFO SYNCHRONIZE
 	if(option == 1)
@@ -102,7 +99,7 @@ void Clithread::ManageProtoOption()
 		// if (cm_ip != '')
 			// cm_ip = inet_ntoa(addr.sin_addr);
 
-		ThreeWayHandshake(cm_username, cm_ip);
+		Synchronize(cm_username, cm_ip);
 	}
 
 	// CONNECTED USERS
@@ -137,12 +134,19 @@ void Clithread::ManageProtoOption()
 		SendPrivateMessage(cm_message, cm_userId, cm_username);
 	}
 
+	// INFO ACKNOWLEDGE
+	else if (option == 6)
+	{
+		int cm_userId = cm.acknowledge().userid();
+		printf("SERVER - La opción es 6! Acknowledge por parte del cliente\n");
+		AcknowledgeFromClient(cm_userId);
+	}
+
 }
 
 
-void Clithread::ThreeWayHandshake(string username, string ip = "")
+void Clithread::Synchronize(string username, string ip = "")
 {
-	printf("SERVER - Entrando al ThreeWayHandshake\n");
 	// Preparar mensaje de respuesta
 	MyInfoResponse myInfo;
 	myInfo.set_userid(cid);
@@ -158,52 +162,32 @@ void Clithread::ThreeWayHandshake(string username, string ip = "")
 	if (sent == 0)
 	{
 		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
-		EndConnection();
+		closeConnection = true;
 	}
 
 	printf("SERVER - El id fue entregado al cliente\n");
-
-	// Ahora le toca al servidor esperar la respuesta del cliente
-	// ... recibir mensajes del cliente
-	bzero(buffer, BUFSIZE);
-	int received = recv(socket, buffer, BUFSIZE, 0);
-
-	if (received > 0)
-	{
-		printf("SERVER - Se logra recibir acknowledge del cliente\n");
-		// Deserealizar el acknowledge
-		MyInfoAcknowledge ack;
-		ack.ParseFromString(buffer);
-
-		// Comprobar que el user id sea el mismo y luego
-		// intentar registrar al usuario
-		if (ack.userid() == cid)
-		{
-			Usuario newUser(username, ip, socket);
-			if(RegisterUser(newUser) > 0)
-				ManageClient();
-		}
-	}
-
-
-	else
-		ManageRecvError(received);
+	user.user = username;
+	user.ip = ip;
+	user.socket = socket;
 
 }
+
 
 void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 {
-	// TODO: Handshake
+	// TODO: usar ConnectedUser
 }
+
 
 void Clithread::ChangeUserStatus(string newStatus)
 {
-	// TODO: Handshake
+	// TODO: usar ChangeStatusResponse
 }
+
 
 void Clithread::BroadcastMessage(string message)
 {
-	// TODO: Handshake
+	// TODO: usar BroadcastResponse y BroadcastMessage
 }
 
 
@@ -241,6 +225,28 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 }
 
 
+void Clithread::SendError(int userId)
+{
+	// TODO: Usar ErrorResponse
+}
+
+void Clithread::AcknowledgeFromClient(int userId)
+{
+	// Comprobar que el user id sea el mismo y luego
+	// intentar registrar al usuario
+	if (userId == cid)
+	{
+		printf("SERVER - Se logra recibir acknowledge del cliente\n");
+		if(RegisterUser(user) != 0)
+			// Informar al cliente que user o ip ya existen
+			SendError(userId);
+	}
+	// De lo contrario, no se recibió lo que se esparaba... mandar error
+	else
+		SendError(userId);
+}
+
+
 /* FUNCIONES RELACIONADAS AL MAP */
 void Clithread::GetMap()
 {
@@ -253,7 +259,7 @@ void Clithread::GetMap()
 		Usuario u = itr->second;
 
         cout << '\t' << u.user
-             << '\t' << '\t' << u.estado << '\n'; 
+             << '\t' << u.estado << '\n'; 
     } 
     cout << endl;
 
@@ -296,7 +302,7 @@ int Clithread::RegisterUser(Usuario newUser)
 	else
 	{
 		printf("IP O USERNAME YA EXISTEN\n");
-		EndConnection();
+		closeConnection = true;
 		return 0;
 	}
 }
@@ -336,6 +342,8 @@ void Clithread::EndConnection()
 	dict.erase(cid);
 	// Cerrar socket
 	close(socket);
+
+	// exit(0);
 }
 
 

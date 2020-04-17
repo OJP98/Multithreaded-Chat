@@ -22,7 +22,7 @@ using namespace std;
 // Unas variables útiles
 int sockfd, portno;
 int clientCount = 0;
-int idCount = 0;
+int idCount = 1;
 struct sockaddr_in serv_addr;
 pthread_t threadPool[MAX_CLIENTS];
 void * retvals[MAX_CLIENTS];
@@ -59,7 +59,7 @@ void *manageNewThread(void *args)
 		data->addr
 	);
 
-	clithread.ConnectWithClient();
+	clithread.ManageClient();
 
 	clientCount--;
 	pthread_exit(NULL);
