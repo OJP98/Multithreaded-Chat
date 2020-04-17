@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	   exit(0);
 	}
 
-	portno = atoi(argv[2]);
+	portno = atoi(argv[3]);
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (sockfd < 0) 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
 	
 	// Obtener host desde consola
-	server = gethostbyname(argv[1]);
+	server = gethostbyname(argv[2]);
 
 	if (server == NULL) {
 		fprintf(stderr,"ERROR, no existe la dirección del host\n");
@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
 
 	// Se crea instacia tipo MyInfoSynchronize y se setean los valores deseables
 	MyInfoSynchronize * miInfo(new MyInfoSynchronize);
-	miInfo->set_username("usuario1234");
-	miInfo->set_ip("127.0.0.1");
+	miInfo->set_username(argv[1]);
+	miInfo->set_ip(argv[4]);
 
 	// Se crea instancia de Mensaje, se setea los valores deseados
 	ClientMessage m;
