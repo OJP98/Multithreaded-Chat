@@ -4,7 +4,10 @@
 #include <ncurses.h>
 #include <unistd.h>
 #include <pthread.h>
-
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include <iostream>
 #include <string>
@@ -15,6 +18,7 @@
 using namespace std;
 
 #define DELAY 30000
+#define BUFSIZE 1024
 //#####################
 //#### Clase Mensaje ##
 //#####################
@@ -210,12 +214,60 @@ void *spammer(void *arg){
 	}
 }
 
-int main() {
+void error(const char *msg)
+{
+	perror(msg);
+	exit(0);
+}
+
+int main(int argc, char *argv[]) {
+	/////////////////////////////////////////////////////////////////
+	int sockfd, portno, n;
+	struct sockaddr_in serv_addr;
+	struct hostent *server;
+	bool salir = false;
+	char buffer[BUFSIZE];
+
+	if (argc < 3) {
+	   fprintf(stderr,"usage %s hostname port\n", argv[0]);
+	   exit(0);
+	}
+
+	portno = atoi(argv[3]);
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (sockfd < 0) 
+		error("ERROR al abrir socket");
+
+	
+	// Obtener host desde consola
+	server = gethostbyname(argv[2]);
+
+	if (server == NULL) {
+		fprintf(stderr,"ERROR, no existe la dirección del host\n");
+		exit(0);
+	}
+
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+
+	bcopy((char *)server -> h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+	serv_addr.sin_port = htons(portno);
+
+	if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+		error("ERROR, no se pudo conectar al servidor");
+
+	printf("Esperando confirmación del servidor...\n");
+	recv(sockfd, buffer, BUFSIZE, 0);
+	printf("Conexión aceptada!\n\n");
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 	pthread_t hilo1;
 	pthread_create(&hilo1,NULL,spammer,NULL);
     char buf[100] = {0}, *s = buf;
 
-    int ch, cnt = 0, n = 1;
+    int ch, cnt = 0, n2 = 1;
 
     int numPantalla=1;
 
@@ -241,7 +293,7 @@ int main() {
     timeout(100);  // wait 100 milliseconds for input
 
  
-    while (n != 0) {
+    while (n2 != 0) {
         erase();
 
         int x,y;
@@ -265,7 +317,7 @@ int main() {
             {
                 if (ch == 27) {
                     //si presiona [ESC]
-                    n=0;
+                    n2=0;
                 }
                 else if(ch==KEY_UP)
                 {
@@ -311,10 +363,10 @@ int main() {
             if ((ch = getch()) != ERR) {
                 if (ch == '\n') {
                     //esto se ejecuta al presionar enter
-                    nuevoMensaje("TU TATA",string(buf));
+                    nuevoMensaje(argv[1],string(buf));
 
                     *s = 0;
-                    sscanf(buf, "%d", &n);
+                    sscanf(buf, "%d", &n2);
                     s = buf;
                     *s = 0;
                 }
