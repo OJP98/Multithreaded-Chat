@@ -482,7 +482,43 @@ int main(int argc, char *argv[]) {
 
 ///////////////////////////////////////////////
 
+///////////////////////////////////Cambio de estado////////////////////////////////////////////////////////////
 
+    ChangeStatusRequest * statusRequest(new ChangeStatusRequest);
+    statusRequest->set_status("OCUPADO");
+
+    ClientMessage m3;
+    m3.set_option(3);
+    m3.set_allocated_changestatus(statusRequest);
+    // Se serializa el message a string
+    string binary3;
+    m3.SerializeToString(&binary3);
+
+    char cstr3[binary3.size() + 1];
+    strcpy(cstr3, binary3.c_str());
+
+    send(sockfd, cstr3, strlen(cstr3), 0);
+
+    printf("Esperando confirmación del servidor...\n");
+
+    char buffer2[BUFSIZE];
+    // Esperar respuesta del servidor
+    bzero(buffer2, BUFSIZE);
+    recv(sockfd, buffer2, BUFSIZE, 0);
+
+    string ret(buffer2, BUFSIZE);
+    ServerMessage sm2;
+    sm2.ParseFromString(buffer2);
+    int option2 = sm2.option();
+
+    // MANEJAR MY INFO RESPONSE
+    if (option2 == 6)
+    {
+        string userStatus = sm2.changestatusresponse().status();
+        cout << "MY NUEVO STATUS ES: " << userStatus << endl;
+    }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
