@@ -14,6 +14,7 @@
 #include <cstring>
 
 #include <map>
+#include <vector>
 
 using namespace std;
 
@@ -29,11 +30,13 @@ public:
     Mensaje(string usuarioP,string mensajeP);
     string usuario;
     string mensaje; 
+    int visto;
 };
 Mensaje::Mensaje(string usuarioP,string mensajeP)
 {
     usuario=usuarioP;
     mensaje=mensajeP;
+    visto=0;
 
 }
 
@@ -42,7 +45,9 @@ Mensaje::Mensaje(string usuarioP,string mensajeP)
 //##########################
 
 map<int,Mensaje*> mensajes;
-int contador=0;
+map<string,vector<Mensaje*>> mensajesPrivados;
+int contador=0,n2 = 1;
+
 
 //########################
 //#### Metodos globales ##
@@ -56,44 +61,70 @@ void nuevoMensaje(string usuario,string mensaje)
     mensajes[contador++]=new Mensaje(usuario,mensaje);
 }
 
-void printMensajes(int max,int posInicial)
+void nuevoMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
 {
-    map<int, Mensaje*>::iterator iter;
-
-    iter = mensajes.begin();
-    int ajuste=(mensajes.size()-max);
-
-    for (int i = 0; i < ajuste; ++i)
+    if(mensajesPrivados.find(bandejaUsuario)==mensajesPrivados.end())
     {
-        iter++;
+        vector<Mensaje*> vect; 
+        vect.push_back(new Mensaje(usuario,mensaje));
+        mensajesPrivados[bandejaUsuario]=vect;
     }
-    
-    int contadorLinea=0;
-    for (iter; iter != mensajes.end(); iter++)
+    else
     {
-        /*
-        //--------
-        string a = "Hello World!";
-        char cstr[a.size() + 1];
-        strcpy(cstr, a.c_str());    
-        mvprintw(2, 0, "String: %s", cstr);
-        //-------
-        */
+           
+        mensajesPrivados.at(bandejaUsuario).push_back(new Mensaje(usuario,mensaje));
+    }
+ 
+}
 
-        string nombreIter=iter->second->usuario;
-        string mensajeIter=iter->second->mensaje;
+string getNombreChat(int id)
+{
+    map<string,vector<Mensaje*>>::iterator iter;
+    int contador=0;
 
-        char nombreChar[nombreIter.size() + 1];
-        strcpy(nombreChar, nombreIter.c_str());
+    vector<Mensaje*> chat;
 
-        char mensajeChar[mensajeIter.size() + 1];
-        strcpy(mensajeChar, mensajeIter.c_str());    
 
-        mvprintw(posInicial+(contadorLinea++), 0,"%s \t: %s",nombreChar,mensajeChar);
+
+    for (iter=mensajesPrivados.begin(); iter != mensajesPrivados.end(); iter++)
+    {
+        if(contador++==id)
+        {
+            return(iter->first);
+        }
         
     }
 
 }
+
+void nuevoMensajePrivado(string bandejaUsuario)
+{
+
+    vector<Mensaje*> vect; 
+    mensajesPrivados[bandejaUsuario]=vect;
+}
+
+int estadoDeChat(string nombreChat)
+{
+    
+    vector<Mensaje*> chatActual;
+
+
+    chatActual=mensajesPrivados[nombreChat];
+
+    if(chatActual.empty())
+    {
+        return 1;
+    }
+    
+
+    if(chatActual[chatActual.size()-1]->visto==0) return 0;
+        else return 1;
+    
+
+}
+
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
 //~~ Metodos ncurses ~~~~~
@@ -205,9 +236,123 @@ void HacerMenuPrincipal(int opcion)
 
 }
 
+void printMensajes(int max,int posInicial)
+{
+    map<int, Mensaje*>::iterator iter;
+
+    iter = mensajes.begin();
+    int ajuste=(mensajes.size()-max);
+
+    for (int i = 0; i < ajuste; ++i)
+    {
+        iter++;
+    }
+    
+    int contadorLinea=0;
+    for (iter; iter != mensajes.end(); iter++)
+    {
+        
+        string nombreIter=iter->second->usuario;
+        string mensajeIter=iter->second->mensaje;
+
+        char nombreChar[nombreIter.size() + 1];
+        strcpy(nombreChar, nombreIter.c_str());
+
+        char mensajeChar[mensajeIter.size() + 1];
+        strcpy(mensajeChar, mensajeIter.c_str());    
+
+        mvprintw(posInicial+(contadorLinea++), 0,"%s \t: %s",nombreChar,mensajeChar);
+        
+    }
+
+}
+
+void printBandejaPrivada(int posInicial, int posBandejaPrivada)
+{
+
+    map<string,vector<Mensaje*>>::iterator iter;
+    int contadorLinea=0;
+
+    for (iter=mensajesPrivados.begin(); iter != mensajesPrivados.end(); iter++)
+    {
+        string nombreIter=iter->first;
+
+        char nombreChar[nombreIter.size() + 1];
+        strcpy(nombreChar, nombreIter.c_str());
+
+        int estadoActual=estadoDeChat(nombreIter);
+        
+        if (posBandejaPrivada==contadorLinea)
+        {
+            attron(COLOR_PAIR(1));
+            if(estadoActual) mvprintw(posInicial+(contadorLinea++), 0,"%s",nombreChar);
+            else mvprintw(posInicial+(contadorLinea++), 0,"%s (*)",nombreChar);
+            attroff(COLOR_PAIR(1));//se apaga el color
+        }
+        else
+        {
+            if(estadoActual) mvprintw(posInicial+(contadorLinea++), 0,"%s",nombreChar);
+            else mvprintw(posInicial+(contadorLinea++), 0,"%s (*)",nombreChar);
+            
+        }
+        
+
+    }
+
+}
+
+void printChatPrivado(int id,int max,int posInicial)
+{
+
+    map<string,vector<Mensaje*>>::iterator iter;
+    int contador=0;
+
+    vector<Mensaje*> chat;
+
+
+
+    for (iter=mensajesPrivados.begin(); iter != mensajesPrivados.end(); iter++)
+    {
+        if(contador++==id)
+        {
+            chat=mensajesPrivados.at(iter->first);
+            break;
+        }
+        
+    }
+
+    if(!chat.empty())
+    {
+        chat[chat.size()-1]->visto=1;
+        int ajuste=(chat.size()-max);
+        if(ajuste<0) ajuste=0;
+        contador=0;
+        for (int i=(0+ajuste); i < chat.size(); i++) 
+        {
+            string nombreIter=chat[i]->usuario;
+            string mensajeIter=chat[i]->mensaje;
+
+            char nombreChar[nombreIter.size() + 1];
+            strcpy(nombreChar, nombreIter.c_str());
+
+            char mensajeChar[mensajeIter.size() + 1];
+            strcpy(mensajeChar, mensajeIter.c_str());
+
+            mvprintw(posInicial+(contador++), 0,"%s \t: %s",nombreChar,mensajeChar);
+        }
+
+    }
+
+    
+
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~
+//~~ Metodos Otros ~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~
 void *spammer(void *arg){
 	int i=1;
-	while(i<100000){
+	while(n2 != 0){
 		nuevoMensaje("TU NANA","Hola Mundo");
 		sleep(5);
 		i++;
@@ -222,6 +367,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[]) {
 	/////////////////////////////////////////////////////////////////
+    /*
 	int sockfd, portno, n;
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
@@ -260,18 +406,28 @@ int main(int argc, char *argv[]) {
 	printf("Esperando confirmación del servidor...\n");
 	recv(sockfd, buffer, BUFSIZE, 0);
 	printf("Conexión aceptada!\n\n");
+    */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+//~~~~~~~~~~~~~~~~~~~~~~~~
+//~~ Cosas Temporales ~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~
+    nuevoMensajePrivado("Jose","Julian","Que onda");
+    nuevoMensajePrivado("Julian","Julian","Que onda");
+    nuevoMensajePrivado("Julian","Jose","Como vas?");
+    nuevoMensajePrivado("Gustavo");
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 	pthread_t hilo1;
 	pthread_create(&hilo1,NULL,spammer,NULL);
     char buf[100] = {0}, *s = buf;
 
-    int ch, cnt = 0, n2 = 1;
+    int ch, cnt = 0;
 
     int numPantalla=1;
 
     int opcionMenuPrincipal=1;//Opcion de menuPrincipal
+
+    int posBandejaPrivada=0; //opcion de bandeja privada
 
     WINDOW *w;
  
@@ -336,7 +492,12 @@ int main(int argc, char *argv[]) {
                         opcionMenuPrincipal=1;
                         numPantalla=2;
                     }
-                    else if(opcionMenuPrincipal==7) n=0;
+                    else if(opcionMenuPrincipal==5)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=5;
+                    }
+                    else if(opcionMenuPrincipal==7) n2=0;
                 }
 
             }
@@ -363,7 +524,8 @@ int main(int argc, char *argv[]) {
             if ((ch = getch()) != ERR) {
                 if (ch == '\n') {
                     //esto se ejecuta al presionar enter
-                    nuevoMensaje(argv[1],string(buf));
+                    if(strlen(buf)>0)
+                        nuevoMensaje(argv[1],string(buf));
 
                     *s = 0;
                     sscanf(buf, "%d", &n2);
@@ -373,6 +535,10 @@ int main(int argc, char *argv[]) {
                 else if (ch == 27) {
                     //si presiona [ESC]
                     numPantalla=1;
+                    *s = 0;
+                    sscanf(buf, "%d", &n2);
+                    s = buf;
+                    *s = 0;
                 }
                 else if (ch == KEY_BACKSPACE) {
                     if (s > buf)
@@ -383,6 +549,88 @@ int main(int argc, char *argv[]) {
                     *s = 0;
                 }
             }
+
+        }
+        else if(numPantalla==5)
+        {
+            //Bandeja de entrada de mensajes privados
+            mvprintw(0, 0,"Bandeja de mensajes privados");
+            printBandejaPrivada(2,posBandejaPrivada);
+            mvprintw(9, 0,"%d",posBandejaPrivada);
+            refresh();
+
+            if ((ch = getch()) != ERR) 
+            {
+                if (ch == 27) {
+                    //si presiona [ESC]
+                    numPantalla=1;
+                }
+                else if(ch==KEY_UP)
+                {
+                    if(posBandejaPrivada--<=0) posBandejaPrivada=mensajesPrivados.size()-1;
+
+                }
+                else if(ch==KEY_DOWN)
+                {
+                    if(posBandejaPrivada++>=(mensajesPrivados.size()-1)) posBandejaPrivada=0;
+                    
+                }
+                else if (ch=='\n') 
+                {
+                    numPantalla=6;
+                   
+                }
+
+            }
+        }
+        else if(numPantalla==6)
+        {
+            //Chat Privado
+            string nombreChat=getNombreChat(posBandejaPrivada);
+            char nombreChatChar[nombreChat.size() + 1];
+            strcpy(nombreChatChar, nombreChat.c_str());
+            mvprintw(0, 0,"Chat Privado %s",nombreChatChar);          
+
+            makeLine(w,x,y-5);
+            //(int id,int max,int posInicial)
+            printChatPrivado(posBandejaPrivada,y-7,2);
+            mvprintw(y-4, 0, "> %s", buf);
+            refresh();
+
+
+
+            if ((ch = getch()) != ERR) {
+                if (ch == '\n') {
+                    //esto se ejecuta al presionar enter
+                    if(strlen(buf)>0)
+                        nuevoMensajePrivado(getNombreChat(posBandejaPrivada),"TU TATA",string(buf));
+                                        
+
+                    *s = 0;
+                    sscanf(buf, "%d", &n2);
+                    s = buf;
+                    *s = 0;
+                }
+                else if (ch == 27) {
+                    //si presiona [ESC]
+                    numPantalla=5;
+                    *s = 0;
+                    sscanf(buf, "%d", &n2);
+                    s = buf;
+                    *s = 0;
+                }
+                else if (ch == KEY_BACKSPACE) {
+                    if (s > buf)
+                        *--s = 0;
+                }
+                else if (s - buf < (long)sizeof buf - 1) {
+                    *s++ = ch;
+                    *s = 0;
+                }
+            }
+
+
+
 
         }
 
