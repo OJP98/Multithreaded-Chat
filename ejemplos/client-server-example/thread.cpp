@@ -59,14 +59,6 @@ void Clithread::ManageClient()
 				printf("\nSERVER - Me pierdes cliente...\nSERVER - F en el chat amigos\n");
 				closeConnection = true;
 			}
-
-			else if (strcmp(buffer, "privado") == 0)
-			{
-				printf("SERVER - Alguien está enviando un mensaje privado...\n");
-				GetMap();
-				// SendPrivateMessage();
-			}
-
 			else
 			{
 				ManageProtoOption();
@@ -93,8 +85,12 @@ void Clithread::ManageProtoOption()
 	// MY INFO SYNCHRONIZE
 	if(option == 1)
 	{
+		string cm_ip = "";
 		string cm_username = cm.synchronize().username();
-		string cm_ip = cm.synchronize().ip();
+
+		if (cm.synchronize().has_ip())
+			cm_ip = cm.synchronize().ip();
+
 		printf("SERVER - La opción es 1! synchronize con user e ip\n");
 		// if (cm_ip != '')
 			// cm_ip = inet_ntoa(addr.sin_addr);
@@ -107,16 +103,22 @@ void Clithread::ManageProtoOption()
 	{
 		int cm_userId = cm.connectedusers().userid();
   		string cm_username = cm.connectedusers().username();
-
+  		printf("SERVER - La opción es 2! Enviar usuario(s) conectado(s)\n");
 		SendConnectedUsers(cm_userId, cm_username);
 	}
 
 	// CHANGE STATUS
 	else if(option == 3)
 	{
-		string cm_status = cm.changestatus().status();
-		printf("SERVER - La opción es 3! Cambiar de status\n");
-		ChangeUserStatus(cm_status);
+		if (cm.changestatus().has_status())
+		{
+			string cm_status = cm.changestatus().status();
+			printf("SERVER - La opción es 3! Cambiar de status\n");
+			ChangeUserStatus(cm_status);
+		}
+		else
+			SendError(cid);
+
 	}
 
 	// BROADCAST
@@ -129,18 +131,37 @@ void Clithread::ManageProtoOption()
 	// DIRECT MESSAGE
 	else if(option == 5)
 	{
-		string cm_message = cm.directmessage().message();
-		int cm_userId = cm.directmessage().userid();
-		string cm_username = cm.directmessage().username();
-		SendPrivateMessage(cm_message, cm_userId, cm_username);
+		string cm_message;
+		int cm_userId = -1;
+		string cm_username = "";
+
+		if (cm.directmessage().has_message())
+		{
+			cm_message = cm.directmessage().message();
+
+			if (cm.directmessage().has_userid())
+				cm_userId = cm.directmessage().userid();
+
+			if (cm.directmessage().has_username())
+				cm_username = cm.directmessage().username();
+
+			printf("SERVER - La opción es 5! Mandar mensaje directo\n");
+			SendPrivateMessage(cm_message, cm_userId, cm_username);
+		}
+
 	}
 
 	// INFO ACKNOWLEDGE
 	else if (option == 6)
 	{
-		int cm_userId = cm.acknowledge().userid();
-		printf("SERVER - La opción es 6! Acknowledge por parte del cliente\n");
-		AcknowledgeFromClient(cm_userId);
+		if (cm.acknowledge().has_userid())
+		{
+			int cm_userId = cm.acknowledge().userid();
+			printf("SERVER - La opción es 6! Acknowledge por parte del cliente\n");
+			AcknowledgeFromClient(cm_userId);
+		}
+		else
+			SendError(cid);
 	}
 
 }
@@ -181,7 +202,91 @@ void Clithread::Synchronize(string username, string ip = "")
 
 void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 {
-	// TODO: usar ConnectedUser
+	// Indicar objeto a enviar
+	ConnectedUserResponse * response(new ConnectedUserResponse);
+
+	// La opción a mandar del lado del servidor es la 6
+	ServerMessage sm;
+	sm.set_option(6);
+
+	// Todos los usuarios
+	if (userId == 0)
+	{
+		map<int, Usuario>::iterator itr; 
+	    for (itr = dict.begin(); itr != dict.end(); ++itr)
+	    { 
+
+	    	// Obtener el id del usuario iterado
+	    	int itrUserId = itr->first;
+	    	// Obtener el usuario del diccionario
+			Usuario u = itr->second;
+
+			// Armar el usuario y agregarlo al response
+			ConnectedUser* connectedUser = response->add_connectedusers();
+			connectedUser->set_username(u.user);
+			connectedUser->set_status(u.estado);
+			connectedUser->set_ip(u.ip);
+	    } 
+	}
+
+	// Usuario específico
+	else if (userId > 0)
+	{
+
+		Usuario u = dict[userId];
+
+		ConnectedUser* connectedUser = response->add_connectedusers();
+		connectedUser->set_username(u.user);
+		connectedUser->set_status(u.estado);
+		connectedUser->set_ip(u.ip);
+	}
+
+	// Buscar por username
+	else if (username.compare("") != 0)
+	{
+		int destUserId = GetUsernameId(username);
+
+		// Si el username indicado existe
+		if (destUserId >= 0)
+		{
+			Usuario u = dict[destUserId];
+			ConnectedUser* connectedUser = response->add_connectedusers();
+			connectedUser->set_username(u.user);
+			connectedUser->set_status(u.estado);
+			connectedUser->set_ip(u.ip);
+		}
+
+		// De lo contario, enviar error
+		else
+		{
+			printf("Server - El username especificado no existe!\n");
+			SendError(cid);
+		}
+	}
+
+	// Si nada cumple, enviar error
+	else
+		SendError(cid);
+
+
+	// Alojar la respuesta
+	sm.set_allocated_connecteduserresponse(response);
+
+	// Preparar y enviar el mensaje
+	string binary;
+	sm.SerializeToString(&binary);
+
+	char cstr[binary.size() + 1];
+    strcpy(cstr, binary.c_str());
+
+	// Enviar el mensaje serializado al cliente.
+	int sent = send(socket, cstr, strlen(cstr), 0);
+	if (sent == 0)
+	{
+		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+		closeConnection = true;
+	}
+	printf("SERVER - Los usuarios conectados fueron enviados al cliente\n");
 }
 
 
@@ -222,35 +327,51 @@ void Clithread::BroadcastMessage(string message)
 
 void Clithread::SendPrivateMessage(string message, int userId, string username)
 {
-	// Recibir mensajes del cliente constantemente
-	bzero(buffer, BUFSIZE);
-	int received = recv(socket, buffer, BUFSIZE, 0);
+	int destSocket;
 
-	if (received > 0)
+	// Si el usuario manda un id, buscar el usuario con ese id.
+	// PREGUNTA: Debería validar si existe el id?
+	if (userId > 0)
 	{
-		// Quitar el caracter de espacio \n
-		if('\n' == buffer[strlen(buffer) - 1])
-			buffer[strlen(buffer) - 1] = '\0';
-
-		int destUserId = GetUsernameId(buffer);
+		Usuario destUser = dict[userId];
+		destSocket = destUser.socket;
+	}
+	else if (username.compare("") != 0)
+	{
+		int destUserId = GetUsernameId(username);
 
 		if (destUserId >= 0)
 		{
 			Usuario destUser = dict[destUserId];
-
-			bzero(buffer, BUFSIZE);
-			strcpy(buffer, "MENSAJE PRIVADO DE PARTE DE ALGUIEN...\n");
-			send(destUser.socket, buffer, BUFSIZE, 0);
+			destSocket = destUser.socket;
 		}
 		else
 		{
-			// TODO: Indicarle al usuario que ese usuario no existe
-			printf("ALGUIEN DIGALE A ESTE PENDEJO QUE ESE USUARIO NO EXISTE!\n");
+			printf("Server - El username especificado no existe!\n");
+			SendError(cid);
 		}
 	}
 
-	else
-		ManageRecvError(received);
+	DirectMessageResponse * response(new DirectMessageResponse);
+	response->set_messagestatus("TEST");
+
+	ServerMessage sm;
+	sm.set_option(8);
+	sm.set_allocated_directmessageresponse(response);
+
+	string binary;
+	sm.SerializeToString(&binary);
+
+	char cstr[binary.size() + 1];
+    strcpy(cstr, binary.c_str());
+
+	// Enviar el mensaje serializado al cliente.
+	int sent = send(socket, cstr, strlen(cstr), 0);
+	if (sent == 0)
+	{
+		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+		closeConnection = true;	
+	}
 }
 
 
