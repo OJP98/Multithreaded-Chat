@@ -44,7 +44,7 @@ public:
 	void ChangeUserStatus(string newStatus);
 	void BroadcastMessage(string message);
 	void SendPrivateMessage(string message, int userId, string username);
-	void SendError(int userId);
+	void SendError(int userId, string errorMsg);
 	void AcknowledgeFromClient(int userId);
 
 	// Métodos relacionados al diccionario

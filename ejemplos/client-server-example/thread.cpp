@@ -90,19 +90,24 @@ void Clithread::ManageProtoOption()
 
 		if (cm.synchronize().has_ip())
 			cm_ip = cm.synchronize().ip();
+		else
+			cm_ip = inet_ntoa(addr.sin_addr);
 
 		printf("SERVER - La opción es 1! synchronize con user e ip\n");
-		// if (cm_ip != '')
-			// cm_ip = inet_ntoa(addr.sin_addr);
-
 		Synchronize(cm_username, cm_ip);
 	}
 
 	// CONNECTED USERS
 	else if(option == 2)
 	{
-		int cm_userId = cm.connectedusers().userid();
-  		string cm_username = cm.connectedusers().username();
+		int cm_userId = -1;
+		string cm_username = "";
+		if (cm.connectedusers().has_userid())
+			cm_userId = cm.connectedusers().userid();
+
+		if (cm.connectedusers().has_username())
+			cm_username = cm.connectedusers().username();
+
   		printf("SERVER - La opción es 2! Enviar usuario(s) conectado(s)\n");
 		SendConnectedUsers(cm_userId, cm_username);
 	}
@@ -117,7 +122,7 @@ void Clithread::ManageProtoOption()
 			ChangeUserStatus(cm_status);
 		}
 		else
-			SendError(cid);
+			SendError(cid, "Server didn't recieved any status.");
 
 	}
 
@@ -148,6 +153,8 @@ void Clithread::ManageProtoOption()
 			printf("SERVER - La opción es 5! Mandar mensaje directo\n");
 			SendPrivateMessage(cm_message, cm_userId, cm_username);
 		}
+		else
+			SendError(cid, "Server didn't received any message.");
 
 	}
 
@@ -161,7 +168,7 @@ void Clithread::ManageProtoOption()
 			AcknowledgeFromClient(cm_userId);
 		}
 		else
-			SendError(cid);
+			SendError(cid, "Server didn't received any user id.");
 	}
 
 }
@@ -232,7 +239,6 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 	// Usuario específico
 	else if (userId > 0)
 	{
-
 		Usuario u = dict[userId];
 
 		ConnectedUser* connectedUser = response->add_connectedusers();
@@ -260,13 +266,13 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 		else
 		{
 			printf("Server - El username especificado no existe!\n");
-			SendError(cid);
+			SendError(cid, "Specified Username doesn't exist.");
 		}
 	}
 
 	// Si nada cumple, enviar error
 	else
-		SendError(cid);
+		SendError(cid, "Server couldn't match id nor username.");
 
 
 	// Alojar la respuesta
@@ -344,20 +350,72 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 		{
 			Usuario destUser = dict[destUserId];
 			destSocket = destUser.socket;
+			userId = destUserId;
 		}
 		else
 		{
 			printf("Server - El username especificado no existe!\n");
-			SendError(cid);
+			SendError(cid, "Specified username doesn't exist.");
 		}
 	}
 
-	DirectMessageResponse * response(new DirectMessageResponse);
-	response->set_messagestatus("TEST");
+	// Enviar mensaje al cliente solicitado
+	DirectMessage * dm(new DirectMessage);
+	dm->set_message(message);
+	dm->set_userid(userId);
+
+	ServerMessage newSM;
+	newSM.set_option(2);
+	newSM.set_allocated_message(dm);
+
+	string dmBinary;
+	newSM.SerializeToString(&dmBinary);
+
+	char dmstr[dmBinary.size() + 1];
+	strcpy(dmstr, dmBinary.c_str());
+
+	int dmSent = send(destSocket, dmstr, strlen(dmstr), 0);
+	if (dmSent == 0)
+	{
+		fprintf(stderr, "ERROR al enviar mensaje de cliente a cliente\n");
+		SendError(cid, "Server couldn't send message to client.");
+	}
+	else
+	{
+		// Enviar response al cliente que solicitó el mensaje
+		DirectMessageResponse * response(new DirectMessageResponse);
+		response->set_messagestatus("TEST");
+
+		ServerMessage sm;
+		sm.set_option(8);
+		sm.set_allocated_directmessageresponse(response);
+
+		string binary;
+		sm.SerializeToString(&binary);
+
+		char cstr[binary.size() + 1];
+	    strcpy(cstr, binary.c_str());
+
+		// Enviar el mensaje serializado al cliente.
+		int sent = send(socket, cstr, strlen(cstr), 0);
+		if (sent == 0)
+		{
+			fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+			closeConnection = true;	
+		}
+	}
+}
+
+
+void Clithread::SendError(int userId, string errorMsg)
+{
+	// Enviar response al cliente que solicitó el mensaje
+	ErrorResponse * response(new ErrorResponse);
+	response->set_errormessage(errorMsg);
 
 	ServerMessage sm;
-	sm.set_option(8);
-	sm.set_allocated_directmessageresponse(response);
+	sm.set_option(4);
+	sm.set_allocated_error(response);
 
 	string binary;
 	sm.SerializeToString(&binary);
@@ -374,12 +432,6 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 	}
 }
 
-
-void Clithread::SendError(int userId)
-{
-	// TODO: Usar ErrorResponse
-}
-
 void Clithread::AcknowledgeFromClient(int userId)
 {
 	// Comprobar que el user id sea el mismo y luego
@@ -388,12 +440,18 @@ void Clithread::AcknowledgeFromClient(int userId)
 	{
 		printf("SERVER - Se logra recibir acknowledge del cliente\n");
 		if(RegisterUser(user) != 0)
+		{
 			// Informar al cliente que user o ip ya existen
-			SendError(userId);
+			SendError(userId, "Username or ip has already been taken.");
+			closeConnection = true;
+		}
 	}
 	// De lo contrario, no se recibió lo que se esparaba... mandar error
 	else
-		SendError(userId);
+	{
+		SendError(cid, "Client user id doesn't match the one received.");
+		closeConnection = true;
+	}
 }
 
 
