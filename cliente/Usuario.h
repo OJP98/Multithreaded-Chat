@@ -21,9 +21,6 @@ public:
 	string estado;
 	int socket;
 	string ip;
-		
-
-private:
 	time_t horaUltimoMensaje;
 	
 };

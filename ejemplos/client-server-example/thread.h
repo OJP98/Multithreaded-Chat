@@ -27,8 +27,8 @@ public:
 
 	// Datos de conexión
 	struct sockaddr_in addr;
-	int cid, socket;
-	unsigned int client_inactivty_time;
+	int cid, socket, inactiveTime;
+	time_t serverTime;
 	socklen_t len;
 	Usuario user;
 
@@ -53,6 +53,7 @@ public:
 	bool UsernameExists(string username);
 	bool IpExists(string ip);
 	int GetUsernameId(string username);
+	void UpdateUsersStatus();
 
 	// Manejo de errores
 	void error(const char *msg);

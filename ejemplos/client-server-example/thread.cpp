@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <condition_variable>
 #include <map>
+#include <time.h>
 #include <chrono>
 
 #include "thread.h"
@@ -24,7 +25,8 @@ Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 	addr = addrN;
 	len = sizeof(addr);
 	closeConnection = false;
-	client_inactivty_time = 5;
+	time(&serverTime);
+	inactiveTime = 60;
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
 
@@ -47,6 +49,9 @@ void Clithread::ManageClient()
 			}
 			else
 			{
+				// Actualizar actividad del cliente
+				time(&serverTime);
+				user.SetHoraUltimoMensaje(serverTime);
 				ManageProtoOption();
 			}
 		}
@@ -117,7 +122,7 @@ void Clithread::ManageProtoOption()
 	{
 		string cm_message;
 
-		if (cm.directmessage().has_message() && cm.directmessage().message().compare("") != 0)
+		if (cm.broadcast().has_message() && cm.broadcast().message().compare("") != 0)
 		{
 			cm_message = cm.broadcast().message();
 			printf("SERVER - La opción es 4! Broadcast message\n");
@@ -177,7 +182,6 @@ void Clithread::ManageProtoOption()
 void Clithread::Synchronize(string username, string ip = "")
 {
 	// Preparar mensaje de respuesta
-
 	MyInfoResponse * infoResponse(new MyInfoResponse);
 	infoResponse->set_userid(cid);
 
@@ -198,17 +202,27 @@ void Clithread::Synchronize(string username, string ip = "")
 		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
 		closeConnection = true;
 	}
+	else
+	{
+		printf("SERVER - El id fue entregado al cliente\n");
+		user.user = username;
+		user.ip = ip;
+		user.socket = socket;
+		user.SetHoraUltimoMensaje(serverTime);
+	}
 
-	printf("SERVER - El id fue entregado al cliente\n");
-	user.user = username;
-	user.ip = ip;
-	user.socket = socket;
 
 }
 
 
-void Clithread::SendConnectedUsers(int userId = 0, string username = "")
+void Clithread::SendConnectedUsers(int userId, string username = "")
 {
+	// Bandera en el caso que mande una cosa u otra
+	bool isDone = false;
+
+	// Actualizar el estado de los usuarios
+	UpdateUsersStatus();
+
 	// Indicar objeto a enviar
 	ConnectedUserResponse * response(new ConnectedUserResponse);
 
@@ -233,11 +247,13 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 			connectedUser->set_username(u.user);
 			connectedUser->set_status(u.estado);
 			connectedUser->set_ip(u.ip);
-	    } 
+	    }
+
+	    isDone = true;
 	}
 
-	// Usuario específico
-	else if (userId > 0)
+	// Usuario específico, si existe...
+	else if (userId > 0 && dict.count(userId) > 0)
 	{
 		Usuario u = dict[userId];
 
@@ -245,10 +261,12 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 		connectedUser->set_username(u.user);
 		connectedUser->set_status(u.estado);
 		connectedUser->set_ip(u.ip);
+
+		isDone = true;
 	}
 
 	// Buscar por username
-	else if (username.compare("") != 0)
+	if (username.compare("") != 0 && !isDone)
 	{
 		int destUserId = GetUsernameId(username);
 
@@ -266,12 +284,14 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 		else
 		{
 			printf("Server - El username especificado no existe!\n");
-			SendError(cid, "Specified Username doesn't exist.");
+			SendError(cid, "Specified username doesn't exist.");
 		}
+
+		isDone = true;
 	}
 
 	// Si nada cumple, enviar error
-	else
+	else if (!isDone)
 		SendError(cid, "Server couldn't match id nor username.");
 
 
@@ -292,7 +312,8 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
 		closeConnection = true;
 	}
-	printf("SERVER - Los usuarios conectados fueron enviados al cliente\n");
+	else
+		printf("SERVER - Los usuarios conectados fueron enviados al cliente\n");
 }
 
 
@@ -365,7 +386,7 @@ void Clithread::SendBroadcastMessage(string message)
 
 	// 2. Una vez enviado el mensaje, hacerle saber al cliente que lo mandó
 	BroadcastResponse * response(new BroadcastResponse);
-	response->set_messagestatus("TEST");
+	response->set_messagestatus("SENT");
 
 	ServerMessage sm2;
 	sm2.set_option(7);
@@ -391,14 +412,17 @@ void Clithread::SendBroadcastMessage(string message)
 void Clithread::SendPrivateMessage(string message, int userId, string username)
 {
 	int destSocket;
+	bool userFound = false;
 
 	// Si el usuario manda un id, buscar el usuario con ese id.
 	// PREGUNTA: Debería validar si existe el id?
-	if (userId > 0)
+	if (userId > 0 && dict.count(userId) > 0)
 	{
 		Usuario destUser = dict[userId];
 		destSocket = destUser.socket;
+		userFound = true;
 	}
+
 	else if (username.compare("") != 0)
 	{
 		int destUserId = GetUsernameId(username);
@@ -414,54 +438,64 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 			printf("Server - El username especificado no existe!\n");
 			SendError(cid, "Specified username doesn't exist.");
 		}
+		userFound = true;
 	}
 
-	// Enviar mensaje al cliente solicitado
-	DirectMessage * dm(new DirectMessage);
-	dm->set_message(message);
-	dm->set_userid(userId);
-	dm->set_username(username);
-
-	ServerMessage newSM;
-	newSM.set_option(2);
-	newSM.set_allocated_message(dm);
-
-	string dmBinary;
-	newSM.SerializeToString(&dmBinary);
-
-	char dmstr[dmBinary.size() + 1];
-	strcpy(dmstr, dmBinary.c_str());
-
-	int dmSent = send(destSocket, dmstr, strlen(dmstr), 0);
-	if (dmSent == 0)
+	// Evaluar si el usuario fue encontrado o no
+	if (userFound)
 	{
-		fprintf(stderr, "ERROR al enviar mensaje de cliente a cliente\n");
-		SendError(cid, "Server couldn't send message to client.");
-	}
-	else
-	{
-		// Enviar response al cliente que solicitó el mensaje
-		DirectMessageResponse * response(new DirectMessageResponse);
-		response->set_messagestatus("TEST");
 
-		ServerMessage sm;
-		sm.set_option(8);
-		sm.set_allocated_directmessageresponse(response);
+		// Enviar mensaje al cliente solicitado
+		DirectMessage * dm(new DirectMessage);
+		dm->set_message(message);
+		dm->set_userid(userId);
+		dm->set_username(username);
 
-		string binary;
-		sm.SerializeToString(&binary);
+		ServerMessage newSM;
+		newSM.set_option(2);
+		newSM.set_allocated_message(dm);
 
-		char cstr[binary.size() + 1];
-	    strcpy(cstr, binary.c_str());
+		string dmBinary;
+		newSM.SerializeToString(&dmBinary);
 
-		// Enviar el mensaje serializado al cliente.
-		int sent = send(socket, cstr, strlen(cstr), 0);
-		if (sent == 0)
+		char dmstr[dmBinary.size() + 1];
+		strcpy(dmstr, dmBinary.c_str());
+
+		int dmSent = send(destSocket, dmstr, strlen(dmstr), 0);
+		if (dmSent == 0)
 		{
-			fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
-			closeConnection = true;	
+			fprintf(stderr, "ERROR al enviar mensaje de cliente a cliente\n");
+			SendError(cid, "Server couldn't send message to client.");
+		}
+		else
+		{
+			// Enviar response al cliente que solicitó el mensaje
+			DirectMessageResponse * response(new DirectMessageResponse);
+			response->set_messagestatus("SENT");
+
+			ServerMessage sm;
+			sm.set_option(8);
+			sm.set_allocated_directmessageresponse(response);
+
+			string binary;
+			sm.SerializeToString(&binary);
+
+			char cstr[binary.size() + 1];
+		    strcpy(cstr, binary.c_str());
+
+			// Enviar el mensaje serializado al cliente.
+			int sent = send(socket, cstr, strlen(cstr), 0);
+			if (sent == 0)
+			{
+				fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+				closeConnection = true;	
+			}
 		}
 	}
+
+	else
+		SendError(cid, "Server couldn't match username nor id.");
+
 }
 
 
@@ -536,6 +570,7 @@ void Clithread::AddToMap(Usuario newUser)
 {
 	dict.insert(pair<int, Usuario>(cid, newUser));
 	printf("SERVER - Usuario agregado al diccionario!\n");
+	UpdateUsersStatus();
 	GetMap();
 }
 
@@ -567,7 +602,7 @@ int Clithread::RegisterUser(Usuario newUser)
 	}
 	else
 	{
-		printf("IP O USERNAME YA EXISTEN\n");
+		printf("SERVER - IP o nombre de usuario ya existen\n");
 		closeConnection = true;
 		return 0;
 	}
@@ -600,6 +635,30 @@ bool Clithread::IpExists(string ip)
 }
 
 
+void Clithread::UpdateUsersStatus()
+{
+	time_t actualTime;
+	time(&actualTime);
+
+	map<int, Usuario>::iterator itr;
+	for (itr = dict.begin(); itr != dict.end(); ++itr)
+	{
+		// Obtener datos del diccionario
+		int itrid = itr->first;
+		Usuario u = itr->second;
+
+		// Obtener referencia del último mensaje del usuario
+		time_t lastActivity = u.GetHoraUltimoMensaje();
+
+		if (difftime(actualTime, lastActivity) > inactiveTime && u.estado != "OCUPADO")
+		{
+			// Actualizar el estado del usuario si cumple con los requisitos
+			dict[itrid].estado = "INACTIVO";
+		}
+	}
+}
+
+
 /* MANEJO DE ERRORES Y CIERRE DE CONEXIÓN */
 void Clithread::EndConnection()
 {
@@ -608,8 +667,6 @@ void Clithread::EndConnection()
 	dict.erase(cid);
 	// Cerrar socket
 	close(socket);
-
-	// exit(0);
 }
 
 
