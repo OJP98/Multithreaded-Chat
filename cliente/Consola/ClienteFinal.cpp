@@ -156,86 +156,69 @@ void HacerMenuPrincipal(int opcion)
             attron(COLOR_PAIR(1));
             mvprintw(2, 0,"Ver usuarios conectados");
             attroff(COLOR_PAIR(1));//se apaga el color
-            mvprintw(3, 0,"Ver info de usuario");
-            mvprintw(4, 0,"Cambiar estado");
-            mvprintw(5, 0,"Chat Global");
-            mvprintw(6, 0,"Chat privado");
-            mvprintw(7, 0,"Ayuda");
-            mvprintw(8, 0,"Salir");
+            mvprintw(3, 0,"Cambiar estado");
+            mvprintw(4, 0,"Chat Global");
+            mvprintw(5, 0,"Chat privado");
+            mvprintw(6, 0,"Ayuda");
+            mvprintw(7, 0,"Salir");
 
         }
         else if(opcion==2)
         {
             mvprintw(2, 0,"Ver usuarios conectados");
             attron(COLOR_PAIR(1));
-            mvprintw(3, 0,"Ver info de usuario");
+            mvprintw(3, 0,"Cambiar estado");
             attroff(COLOR_PAIR(1));//se apaga el color
-            mvprintw(4, 0,"Cambiar estado");
-            mvprintw(5, 0,"Chat Global");
-            mvprintw(6, 0,"Chat privado");
-            mvprintw(7, 0,"Ayuda");
-            mvprintw(8, 0,"Salir");
+            mvprintw(4, 0,"Chat Global");
+            mvprintw(5, 0,"Chat privado");
+            mvprintw(6, 0,"Ayuda");
+            mvprintw(7, 0,"Salir");
         }
         else if(opcion==3)
         {
             mvprintw(2, 0,"Ver usuarios conectados");
-            mvprintw(3, 0,"Ver info de usuario");
+            mvprintw(3, 0,"Cambiar estado");
             attron(COLOR_PAIR(1));
-            mvprintw(4, 0,"Cambiar estado");
+            mvprintw(4, 0,"Chat Global");
             attroff(COLOR_PAIR(1));//se apaga el color
-            mvprintw(5, 0,"Chat Global");
-            mvprintw(6, 0,"Chat privado");
-            mvprintw(7, 0,"Ayuda");
-            mvprintw(8, 0,"Salir");
+            mvprintw(5, 0,"Chat privado");
+            mvprintw(6, 0,"Ayuda");
+            mvprintw(7, 0,"Salir");
         }
         else if(opcion==4)
         {
             mvprintw(2, 0,"Ver usuarios conectados");
-            mvprintw(3, 0,"Ver info de usuario");
-            mvprintw(4, 0,"Cambiar estado");
+            mvprintw(3, 0,"Cambiar estado");
+            mvprintw(4, 0,"Chat Global");
             attron(COLOR_PAIR(1));
-            mvprintw(5, 0,"Chat Global");
+            mvprintw(5, 0,"Chat privado");
             attroff(COLOR_PAIR(1));//se apaga el color
-            mvprintw(6, 0,"Chat privado");
-            mvprintw(7, 0,"Ayuda");
-            mvprintw(8, 0,"Salir");
+            mvprintw(6, 0,"Ayuda");
+            mvprintw(7, 0,"Salir");
         }
         else if(opcion==5)
         {
             mvprintw(2, 0,"Ver usuarios conectados");
-            mvprintw(3, 0,"Ver info de usuario");
-            mvprintw(4, 0,"Cambiar estado");
-            mvprintw(5, 0,"Chat Global");
+            mvprintw(3, 0,"Cambiar estado");
+            mvprintw(4, 0,"Chat Global");
+            mvprintw(5, 0,"Chat privado");
             attron(COLOR_PAIR(1));
-            mvprintw(6, 0,"Chat privado");
+            mvprintw(6, 0,"Ayuda");
             attroff(COLOR_PAIR(1));//se apaga el color
-            mvprintw(7, 0,"Ayuda");
-            mvprintw(8, 0,"Salir");
+            mvprintw(7, 0,"Salir");
         }
         else if(opcion==6)
         {
             mvprintw(2, 0,"Ver usuarios conectados");
-            mvprintw(3, 0,"Ver info de usuario");
-            mvprintw(4, 0,"Cambiar estado");
-            mvprintw(5, 0,"Chat Global");
-            mvprintw(6, 0,"Chat privado");
+            mvprintw(3, 0,"Cambiar estado");
+            mvprintw(4, 0,"Chat Global");
+            mvprintw(5, 0,"Chat privado");
+            mvprintw(6, 0,"Ayuda");
             attron(COLOR_PAIR(1));
-            mvprintw(7, 0,"Ayuda");
-            attroff(COLOR_PAIR(1));//se apaga el color
-            mvprintw(8, 0,"Salir");
-        }
-        else if(opcion==7)
-        {
-            mvprintw(2, 0,"Ver usuarios conectados");
-            mvprintw(3, 0,"Ver info de usuario");
-            mvprintw(4, 0,"Cambiar estado");
-            mvprintw(5, 0,"Chat Global");
-            mvprintw(6, 0,"Chat privado");
-            mvprintw(7, 0,"Ayuda");
-            attron(COLOR_PAIR(1));
-            mvprintw(8, 0,"Salir");
+            mvprintw(7, 0,"Salir");
             attroff(COLOR_PAIR(1));//se apaga el color
         }
+        
 
 }
 
@@ -350,22 +333,133 @@ void printChatPrivado(int id,int max,int posInicial)
 
 }
 
+void printCambioDeEstado(int posCambiodeEstado)
+{
+    mvprintw(0, 0,"Cambio de Estado");
+
+    if(posCambiodeEstado==0)
+    {
+        attron(COLOR_PAIR(1));
+        mvprintw(2, 0,"Activo"); 
+        attroff(COLOR_PAIR(1));
+        mvprintw(3, 0,"Ocupado"); 
+        mvprintw(4, 0,"Inactivo");
+    }
+    else if(posCambiodeEstado==1)
+    {
+        mvprintw(2, 0,"Activo"); 
+        attron(COLOR_PAIR(1));
+        mvprintw(3, 0,"Ocupado"); 
+        attroff(COLOR_PAIR(1));
+        mvprintw(4, 0,"Inactivo");
+    }
+    else if(posCambiodeEstado==2)
+    {
+        mvprintw(2, 0,"Activo"); 
+        mvprintw(3, 0,"Ocupado"); 
+        attron(COLOR_PAIR(1));
+        mvprintw(4, 0,"Inactivo");
+        attroff(COLOR_PAIR(1));
+    }
+
+      
+
+}
+
+void printAyuda()
+{
+    mvprintw(0, 0,"Ayuda");
+
+    mvprintw(2, 0,  "Generales:");
+    mvprintw(3, 0,  "Para navegar se utilizan las flechas del teclado, para seleccionar una opcion se utiliza la tecla Enter y regresar se utiliza la tecla ESC.");
+
+    mvprintw(6, 0,  "Que encontraras en cada opcion del Menu:");
+    
+    mvprintw(8, 0,  "Ver usuarios conectados:");
+    mvprintw(9, 0,  "Se visualiza la información de los usuarios que están registrados en el servidor, para ver información extra, seleccione un usuario.");
+
+    mvprintw(12, 0,  "Cambiar estado:");
+    mvprintw(13, 0,  "Esta opción permite poder cambiar el estado del usuario (Activo, Ocupado, Inactivo).");
+
+    mvprintw(16, 0,  "Chat global:");
+    mvprintw(17, 0,  "Chat con todos los usuarios conectados.");
+
+    mvprintw(19, 0,  "Chat privado:");
+    mvprintw(20, 0,  "Chat privado con un solo usuario.");
+
+    mvprintw(22, 0,  "Hecho con    por Oscar Juarez, Jose Cifuentes y Luis Esturban.");
+    start_color();
+    init_pair(2, COLOR_WHITE, COLOR_RED);
+    attron(COLOR_PAIR(2));
+    mvprintw(22, 10,  "<3");
+    attroff(COLOR_PAIR(2));
+    mvprintw(23,0,  "");
+    
+/*
+    Chat privado: Permite al usuario contactar con otro usuario conectado para poder tener conversaciones privadas");
+
+      */
+
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~
 //~~ Metodos Otros ~~~~~~~
 //~~~~~~~~~~~~~~~~~~~~~~~~
 void *spammer(void *arg){
-	int i=1;
-	while(n2 != 0){
-		nuevoMensaje("TU NANA","Hola Mundo");
-		sleep(5);
-		i++;
-	}
+    int i=1;
+    while(n2 != 0){
+        nuevoMensaje("TU NANA","Hola Mundo");
+        sleep(5);
+        i++;
+    }
+}
+
+void cambiarEstado(int estado,int sockfd)
+{
+    string posiblesEstados[]={"ACTIVO","OCUPADO","INACTIVO"};
+    
+    ChangeStatusRequest * statusRequest(new ChangeStatusRequest);
+    statusRequest->set_status(posiblesEstados[estado]);
+
+    ClientMessage m3;
+    m3.set_option(3);
+    m3.set_allocated_changestatus(statusRequest);
+    // Se serializa el message a string
+    string binary3;
+    m3.SerializeToString(&binary3);
+
+    char cstr3[binary3.size() + 1];
+    strcpy(cstr3, binary3.c_str());
+
+    send(sockfd, cstr3, strlen(cstr3), 0);
+
+    
+
+    char buffer2[BUFSIZE];
+    // Esperar respuesta del servidor
+    bzero(buffer2, BUFSIZE);
+    recv(sockfd, buffer2, BUFSIZE, 0);
+
+    string ret(buffer2, BUFSIZE);
+    ServerMessage sm2;
+    sm2.ParseFromString(buffer2);
+    int option2 = sm2.option();
+
+    // MANEJAR MY INFO RESPONSE
+    if (option2 == 6)
+    {
+        string userStatus = sm2.changestatusresponse().status();
+        mvprintw(6, 0,"Estado Actualizado");
+        refresh();
+        sleep(1);
+    }
+
 }
 
 void error(const char *msg)
 {
-	perror(msg);
-	exit(0);
+    perror(msg);
+    exit(0);
 }
 
 int main(int argc, char *argv[]) {
@@ -483,40 +577,8 @@ int main(int argc, char *argv[]) {
 ///////////////////////////////////////////////
 
 ///////////////////////////////////Cambio de estado////////////////////////////////////////////////////////////
-
-    ChangeStatusRequest * statusRequest(new ChangeStatusRequest);
-    statusRequest->set_status("OCUPADO");
-
-    ClientMessage m3;
-    m3.set_option(3);
-    m3.set_allocated_changestatus(statusRequest);
-    // Se serializa el message a string
-    string binary3;
-    m3.SerializeToString(&binary3);
-
-    char cstr3[binary3.size() + 1];
-    strcpy(cstr3, binary3.c_str());
-
-    send(sockfd, cstr3, strlen(cstr3), 0);
-
-    printf("Esperando confirmación del servidor...\n");
-
-    char buffer2[BUFSIZE];
-    // Esperar respuesta del servidor
-    bzero(buffer2, BUFSIZE);
-    recv(sockfd, buffer2, BUFSIZE, 0);
-
-    string ret(buffer2, BUFSIZE);
-    ServerMessage sm2;
-    sm2.ParseFromString(buffer2);
-    int option2 = sm2.option();
-
-    // MANEJAR MY INFO RESPONSE
-    if (option2 == 6)
-    {
-        string userStatus = sm2.changestatusresponse().status();
-        cout << "MY NUEVO STATUS ES: " << userStatus << endl;
-    }
+    
+    
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -531,8 +593,8 @@ int main(int argc, char *argv[]) {
     nuevoMensajePrivado("Julian","Jose","Como vas?");
     nuevoMensajePrivado("Gustavo");
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-	pthread_t hilo1;
-	pthread_create(&hilo1,NULL,spammer,NULL);
+    pthread_t hilo1;
+    pthread_create(&hilo1,NULL,spammer,NULL);
     char buf[100] = {0}, *s = buf;
 
     int ch, cnt = 0;
@@ -542,6 +604,8 @@ int main(int argc, char *argv[]) {
     int opcionMenuPrincipal=1;//Opcion de menuPrincipal
 
     int posBandejaPrivada=0; //opcion de bandeja privada
+
+    int posCambioDeEstado=0;
 
     WINDOW *w;
  
@@ -579,7 +643,7 @@ int main(int argc, char *argv[]) {
 
             HacerMenuPrincipal(opcionMenuPrincipal);        
            
-            //mvprintw(9, 0,"%d",opcionMenuPrincipal);
+            mvprintw(9, 0,"%d",opcionMenuPrincipal);
 
             
             refresh();
@@ -591,27 +655,37 @@ int main(int argc, char *argv[]) {
                 }
                 else if(ch==KEY_UP)
                 {
-                    if(opcionMenuPrincipal--<=1) opcionMenuPrincipal=7;
+                    if(opcionMenuPrincipal--<=1) opcionMenuPrincipal=6;
 
                 }
                 else if(ch==KEY_DOWN)
                 {
-                    if(opcionMenuPrincipal++>=7) opcionMenuPrincipal=1;
+                    if(opcionMenuPrincipal++>=6) opcionMenuPrincipal=1;
                     
                 }
                 else if (ch=='\n') 
                 {
-                    if(opcionMenuPrincipal==4)
+                    if(opcionMenuPrincipal==2)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=7;
+                    }
+                    else if(opcionMenuPrincipal==3)
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=2;
                     }
-                    else if(opcionMenuPrincipal==5)
+                    else if(opcionMenuPrincipal==4)
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=5;
                     }
-                    else if(opcionMenuPrincipal==7) n2=0;
+                    else if(opcionMenuPrincipal==5)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=8;
+                    }
+                    else if(opcionMenuPrincipal==6) n2=0;
                 }
 
             }
@@ -743,8 +817,74 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+        }
+        else if(numPantalla==7)
+        {
+            //Cambio de estado
+            //int posInicial, int posBandejaPrivada
+            printCambioDeEstado(posCambioDeEstado);
+            
+            refresh();
 
+            if ((ch = getch()) != ERR) {
+                if (ch == '\n') {
+                    //esto se ejecuta al presionar enter   
+                    cambiarEstado(posCambioDeEstado,sockfd);
+                    numPantalla=1;
+                    posCambioDeEstado=0;
 
+                    *s = 0;
+                    sscanf(buf, "%d", &n2);
+                    s = buf;
+                    *s = 0;
+                }
+                else if (ch == 27) {
+                    //si presiona [ESC]
+                    numPantalla=1;
+                    *s = 0;
+                    sscanf(buf, "%d", &n2);
+                    s = buf;
+                    *s = 0;
+                }
+                else if(ch==KEY_UP)
+                {
+                    if(posCambioDeEstado--<=0) posCambioDeEstado=2;
+
+                }
+                else if(ch==KEY_DOWN)
+                {
+                    if(posCambioDeEstado++>=2) posCambioDeEstado=0;
+                    
+                }
+                else if (ch == KEY_BACKSPACE) {
+                    if (s > buf)
+                        *--s = 0;
+                }
+                else if (s - buf < (long)sizeof buf - 1) {
+                    *s++ = ch;
+                    *s = 0;
+                }
+            }
+
+        }
+        else if(numPantalla==8)
+        {
+            printAyuda();
+            refresh();
+            //ayuda
+            if ((ch = getch()) != ERR) 
+            {
+                if (ch == 27) {
+                    //si presiona [ESC]
+                    numPantalla=1;
+                    *s = 0;
+                    sscanf(buf, "%d", &n2);
+                    s = buf;
+                    *s = 0;
+                }
+            }
+            
+                
 
         }
 
