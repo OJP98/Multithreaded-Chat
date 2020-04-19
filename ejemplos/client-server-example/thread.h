@@ -27,7 +27,8 @@ public:
 
 	// Datos de conexión
 	struct sockaddr_in addr;
-	int cid, socket, *clientCount;
+	int cid, socket;
+	unsigned int client_inactivty_time;
 	socklen_t len;
 	Usuario user;
 

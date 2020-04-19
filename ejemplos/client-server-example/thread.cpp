@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <condition_variable>
 #include <map>
+#include <chrono>
 
 #include "thread.h"
 #include "mensaje.pb.h"
@@ -23,6 +24,7 @@ Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 	addr = addrN;
 	len = sizeof(addr);
 	closeConnection = false;
+	client_inactivty = 5;
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
 
@@ -179,6 +181,12 @@ void Clithread::ManageProtoOption()
 			SendError(cid, "Server didn't received any user id.");
 	}
 
+	// El cliente mandó una opción desconocida
+	else
+	{
+		SendError(cid, "Server couldn't match any of the options requested");
+	}
+
 }
 
 
@@ -222,7 +230,7 @@ void Clithread::SendConnectedUsers(int userId = 0, string username = "")
 
 	// La opción a mandar del lado del servidor es la 6
 	ServerMessage sm;
-	sm.set_option(6);
+	sm.set_option(5);
 
 	// Todos los usuarios
 	if (userId == 0)
@@ -376,8 +384,8 @@ void Clithread::SendBroadcastMessage(string message)
 	response->set_messagestatus("TEST");
 
 	ServerMessage sm2;
-	sm2.set_option(8);
-	sm2.set_allocated_broadcast(msg);
+	sm2.set_option(7);
+	sm2.set_allocated_broadcastresponse(response);
 
 	// Preparar mensaje en string
 	string resp;
@@ -479,7 +487,7 @@ void Clithread::SendError(int userId, string errorMsg)
 	response->set_errormessage(errorMsg);
 
 	ServerMessage sm;
-	sm.set_option(4);
+	sm.set_option(3);
 	sm.set_allocated_error(response);
 
 	string binary;
