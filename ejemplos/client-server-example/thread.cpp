@@ -24,7 +24,7 @@ Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 	addr = addrN;
 	len = sizeof(addr);
 	closeConnection = false;
-	client_inactivty = 5;
+	client_inactivty_time = 5;
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
 
@@ -47,7 +47,7 @@ void Clithread::ConnectWithClient()
 
 void Clithread::ManageClient()
 {
-	printf("SERVER - Ahora a escuchar al cliente\n\n");
+	printf("SERVER - Ahora escuchando al cliente: %d\n",socket);
 	while (socket > 0 && !closeConnection)
 	{
 		// Recibir mensajes del cliente constantemente
@@ -77,7 +77,7 @@ void Clithread::ManageClient()
 /* METODOS RELACIONADOS CON EL PROTOCOLO */
 void Clithread::ManageProtoOption()
 {
-	printf("SERVER - Evaluando opciones del client message\n");
+	printf("\nSERVER - Evaluando opciones del client message\n");
 	string ret(buffer, BUFSIZE);
 
 	ClientMessage cm;
@@ -512,7 +512,7 @@ void Clithread::AcknowledgeFromClient(int userId)
 	if (userId == cid)
 	{
 		printf("SERVER - Se logra recibir acknowledge del cliente\n");
-		if(RegisterUser(user) != 0)
+		if(RegisterUser(user) == 0)
 		{
 			// Informar al cliente que user o ip ya existen
 			SendError(userId, "Username or ip has already been taken.");
