@@ -129,8 +129,16 @@ void Clithread::ManageProtoOption()
 	// BROADCAST
 	else if(option == 4)
 	{
-		string cm_message = cm.broadcast().message();
-		BroadcastMessage(cm_message);
+		string cm_message;
+
+		if (cm.directmessage().has_message() && cm.directmessage.message().compare("") != 0)
+		{
+			cm_message = cm.broadcast().message();
+			printf("SERVER - La opción es 4! Broadcast message\n");
+			BroadcastMessage(cm_message);
+		}
+		else
+			SendError(cid, "Server didn't received any message.");
 	}
 
 	// DIRECT MESSAGE
@@ -140,7 +148,7 @@ void Clithread::ManageProtoOption()
 		int cm_userId = -1;
 		string cm_username = "";
 
-		if (cm.directmessage().has_message())
+		if (cm.directmessage().has_message() && cm.directmessage.message().compare("") != 0)
 		{
 			cm_message = cm.directmessage().message();
 
@@ -327,7 +335,64 @@ void Clithread::ChangeUserStatus(string newStatus)
 
 void Clithread::BroadcastMessage(string message)
 {
-	// TODO: usar BroadcastResponse y BroadcastMessage
+	// Armar el mensaje de broadcast.
+	BroadcastMessage * msg(new BroadcastMessage);
+	msg->set_message(message);
+	msg->set_userid(cid);
+
+	// Armar ahora el server message
+	ServerMessage sm;
+	sm.set_option(1);
+	sm.set_allocated_broadcast(msg);
+
+	// Preparar mensaje en string
+	string binary;
+	sm.SerializeToString(&binary);
+
+	char cstr[binary.size() + 1];
+    strcpy(cstr, binary.c_str());
+
+	// 1. Mandar el mensaje a todos los clientes
+	map<int, Usuario>::iterator itr; 
+    for (itr = dict.begin(); itr != dict.end(); ++itr)
+    { 
+    	// Obtener el id del usuario iterado
+    	int itrUserId = itr->first;
+    	// Obtener el usuario del diccionario
+		Usuario u = itr->second;
+
+		// Enviar el mensaje al cliente.
+		int sent = send(u.socket, cstr, strlen(cstr), 0);
+		if (sent == 0)
+		{
+			fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+			SendError(cid, "Server couldn't reach the client with username: %s",u.username);
+		}
+
+    } 
+
+	// 2. Una vez enviado el mensaje, hacerle saber al cliente que lo mandó
+	BroadcastResponse response(new BroadcastResponse);
+	reponse->set_messagestatus("TEST");
+
+	ServerMessage sm2;
+	sm2.set_option(8);
+	sm2.set_allocated_broadcast(msg);
+
+	// Preparar mensaje en string
+	string resp;
+	sm2.SerializeToString(&resp);
+
+	char rstr[resp.size() + 1];
+    strcpy(rstr, resp.c_str());
+
+    // Enviar el response al cliente.
+	int sent = send(socket, cstr, strlen(cstr), 0);
+	if (sent == 0)
+	{
+		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+		closeConnection = true;
+	}
 }
 
 
