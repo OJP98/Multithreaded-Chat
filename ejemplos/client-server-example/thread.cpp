@@ -29,22 +29,6 @@ Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 }
 
 /* METODOS DE CONEXIÓN CON EL CLIENTE */
-void Clithread::ConnectWithClient()
-{
-
-	// Recibir mensajes del cliente conectado
-	bzero(buffer, BUFSIZE);
-	int received = recv(socket, buffer, BUFSIZE, 0);
-
-	if (received > 0)
-	{
-		ManageProtoOption();
-	}
-	else
-		ManageRecvError(received);
-}
-
-
 void Clithread::ManageClient()
 {
 	printf("SERVER - Ahora escuchando al cliente: %d\n",socket);
@@ -436,6 +420,7 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 	DirectMessage * dm(new DirectMessage);
 	dm->set_message(message);
 	dm->set_userid(userId);
+	dm->set_username(username);
 
 	ServerMessage newSM;
 	newSM.set_option(2);

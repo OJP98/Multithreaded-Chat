@@ -33,9 +33,8 @@ public:
 	Usuario user;
 
 	// Métodos de conexión cliente-servidor
-	void ConnectWithClient();
-	int RegisterUser(Usuario newUser);
 	void ManageClient();
+	int RegisterUser(Usuario newUser);
 	void EndConnection();
 
 	// Métodos de google protobuf
