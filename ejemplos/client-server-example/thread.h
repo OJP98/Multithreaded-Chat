@@ -42,7 +42,7 @@ public:
 	void Synchronize(string username, string ip);
 	void SendConnectedUsers(int userId, string username);
 	void ChangeUserStatus(string newStatus);
-	void BroadcastMessage(string message);
+	void SendBroadcastMessage(string message);
 	void SendPrivateMessage(string message, int userId, string username);
 	void SendError(int userId, string errorMsg);
 	void AcknowledgeFromClient(int userId);

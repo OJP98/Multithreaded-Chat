@@ -131,11 +131,11 @@ void Clithread::ManageProtoOption()
 	{
 		string cm_message;
 
-		if (cm.directmessage().has_message() && cm.directmessage.message().compare("") != 0)
+		if (cm.directmessage().has_message() && cm.directmessage().message().compare("") != 0)
 		{
 			cm_message = cm.broadcast().message();
 			printf("SERVER - La opción es 4! Broadcast message\n");
-			BroadcastMessage(cm_message);
+			SendBroadcastMessage(cm_message);
 		}
 		else
 			SendError(cid, "Server didn't received any message.");
@@ -148,7 +148,7 @@ void Clithread::ManageProtoOption()
 		int cm_userId = -1;
 		string cm_username = "";
 
-		if (cm.directmessage().has_message() && cm.directmessage.message().compare("") != 0)
+		if (cm.directmessage().has_message() && cm.directmessage().message().compare("") != 0)
 		{
 			cm_message = cm.directmessage().message();
 
@@ -333,7 +333,7 @@ void Clithread::ChangeUserStatus(string newStatus)
 }
 
 
-void Clithread::BroadcastMessage(string message)
+void Clithread::SendBroadcastMessage(string message)
 {
 	// Armar el mensaje de broadcast.
 	BroadcastMessage * msg(new BroadcastMessage);
@@ -366,14 +366,14 @@ void Clithread::BroadcastMessage(string message)
 		if (sent == 0)
 		{
 			fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
-			SendError(cid, "Server couldn't reach the client with username: %s",u.username);
+			SendError(cid, "Server couldn't reach one of the clients");
 		}
 
     } 
 
 	// 2. Una vez enviado el mensaje, hacerle saber al cliente que lo mandó
-	BroadcastResponse response(new BroadcastResponse);
-	reponse->set_messagestatus("TEST");
+	BroadcastResponse * response(new BroadcastResponse);
+	response->set_messagestatus("TEST");
 
 	ServerMessage sm2;
 	sm2.set_option(8);
