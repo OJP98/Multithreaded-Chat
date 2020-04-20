@@ -61,6 +61,7 @@ string statusUsuarioBuscado;
 int idUsuarioBuscado;
 string ipUsuarioBuscado;
 
+string mensajeError="";
 
 //########################
 //#### Metodos globales ##
@@ -632,30 +633,9 @@ void cambiarEstado(int estado,int sockfd)
 
     send(sockfd, cstr3, strlen(cstr3), 0);
 
+
+    sleep(1);   
     
-
-    char buffer2[BUFSIZE];
-    // Esperar respuesta del servidor
-    bzero(buffer2, BUFSIZE);
-    recv(sockfd, buffer2, BUFSIZE, 0);
-
-    string ret(buffer2, BUFSIZE);
-    ServerMessage sm2;
-    sm2.ParseFromString(buffer2);
-    int option2 = sm2.option();
-
-    // MANEJAR MY INFO RESPONSE
-    if (option2 == 6)
-    {
-        string userStatus = sm2.changestatusresponse().status();
-        mvprintw(6, 0,"Estado Actualizado");
-        refresh();
-        sleep(1);
-    }else if (option2 == 3)
-    {
-        string errorMensaje= sm2.error().errormessage();
-        cout << "El error es: " <<errorMensaje<< endl;
-    }
 
 }
 string getNombreUsuario(int id)
@@ -719,7 +699,7 @@ void *escucha(void *arg){
         else if (option2 == 3)
         {
             string errorMensaje= sm2.error().errormessage();
-            cout << "El error es: " <<errorMensaje<< endl;
+            mensajeError=errorMensaje;
         }
         // MANEJAR MY INFO RESPONSE
         else if (option2 == 5)
@@ -753,6 +733,13 @@ void *escucha(void *arg){
 
             }
             
+        }
+        // MANEJAR MY INFO RESPONSE
+        else if (option2 == 6)
+        {
+            string userStatus = sm2.changestatusresponse().status();
+            mvprintw(6, 0,"Estado Actualizado");
+            refresh();
         }
 
 
@@ -946,7 +933,7 @@ int main(int argc, char *argv[]) {
         if(numPantalla==1)
         {
             //menuPrincipal
-
+            mensajeError="";
             start_color();
             init_pair(1, COLOR_BLACK, COLOR_GREEN);
 
@@ -1017,6 +1004,14 @@ int main(int argc, char *argv[]) {
         {
             mvprintw(0, 0,"CHAT GENERAL 2020");
 
+            if(mensajeError!="")
+            {
+                char mensajeErrorChar[mensajeError.size() + 1];
+                strcpy(mensajeErrorChar, mensajeError.c_str());
+                mvprintw(y-1, 0,"%s",mensajeErrorChar);
+            }
+
+
             //int max,int posInicial
             //printMensajes(4,2);
             printMensajes(y-7,2);
@@ -1065,6 +1060,14 @@ int main(int argc, char *argv[]) {
             mvprintw(0, 0,"Bandeja de mensajes privados");
             printBandejaPrivada(2,posBandejaPrivada);
             mvprintw(9, 0,"%d",posBandejaPrivada);
+
+            if(mensajeError!="")
+            {
+                char mensajeErrorChar[mensajeError.size() + 1];
+                strcpy(mensajeErrorChar, mensajeError.c_str());
+                mvprintw(y-1, 0,"ERR: %s",mensajeErrorChar);
+            }
+
             refresh();
 
             if ((ch = getch()) != ERR) 
@@ -1097,7 +1100,14 @@ int main(int argc, char *argv[]) {
             string nombreChat=getNombreChat(posBandejaPrivada);
             char nombreChatChar[nombreChat.size() + 1];
             strcpy(nombreChatChar, nombreChat.c_str());
-            mvprintw(0, 0,"Chat Privado %s",nombreChatChar);          
+            mvprintw(0, 0,"Chat Privado %s",nombreChatChar);   
+
+            if(mensajeError!="")
+            {
+                char mensajeErrorChar[mensajeError.size() + 1];
+                strcpy(mensajeErrorChar, mensajeError.c_str());
+                mvprintw(y-1, 0,"ERR: %s",mensajeErrorChar);
+            }       
 
             makeLine(w,x,y-5);
             //(int id,int max,int posInicial)
@@ -1144,6 +1154,13 @@ int main(int argc, char *argv[]) {
             //Cambio de estado
             //int posInicial, int posBandejaPrivada
             printCambioDeEstado(posCambioDeEstado);
+
+            if(mensajeError!="")
+            {
+                char mensajeErrorChar[mensajeError.size() + 1];
+                strcpy(mensajeErrorChar, mensajeError.c_str());
+                mvprintw(y-1, 0,"ERR: %s",mensajeErrorChar);
+            }
             
             refresh();
 
@@ -1213,6 +1230,14 @@ int main(int argc, char *argv[]) {
             mvprintw(0, 0,"Usuarios Conectados: %d",usuariosConectadosLista.size());
             printUsuariosConectados(posUsuariosConectados);
             mvprintw(9, 0,"%d",posUsuariosConectados);
+
+            if(mensajeError!="")
+            {
+                char mensajeErrorChar[mensajeError.size() + 1];
+                strcpy(mensajeErrorChar, mensajeError.c_str());
+                mvprintw(y-1, 0,"ERR: %s",mensajeErrorChar);
+            }
+
             refresh();
             if ((ch = getch()) != ERR) 
             {
@@ -1244,6 +1269,14 @@ int main(int argc, char *argv[]) {
         {
             mvprintw(0, 0,"Informacion personal");
             printInfoDeUsuario();
+
+            if(mensajeError!="")
+            {
+                char mensajeErrorChar[mensajeError.size() + 1];
+                strcpy(mensajeErrorChar, mensajeError.c_str());
+                mvprintw(y-1, 0,"ERR: %s",mensajeErrorChar);
+            }
+
             refresh();
 
             if ((ch = getch()) != ERR) 
