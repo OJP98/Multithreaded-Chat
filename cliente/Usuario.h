@@ -22,6 +22,7 @@ public:
 	int socket;
 	string ip;
 	time_t horaUltimoMensaje;
+	bool reallyInactive;
 	
 };
 

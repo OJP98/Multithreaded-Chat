@@ -12,6 +12,7 @@ Usuario::Usuario(string userN, string ipN, int socketN)
 	ip = ipN;
 	socket = socketN;
 	estado = "ACTIVO";
+	reallyInactive = false;
 }
 
 Usuario::Usuario()
@@ -20,6 +21,7 @@ Usuario::Usuario()
 	ip = "0";
 	socket = 0;
 	estado = "ACTIVO";
+	reallyInactive = false;
 }
 
 time_t Usuario::GetHoraUltimoMensaje()

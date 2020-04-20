@@ -25,7 +25,6 @@ Clithread::Clithread(int socketN, int cidN, struct sockaddr_in addrN)
 	addr = addrN;
 	len = sizeof(addr);
 	closeConnection = false;
-	time(&serverTime);
 	inactiveTime = 60;
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
@@ -38,10 +37,15 @@ void Clithread::ManageClient()
 	{
 		// Recibir mensajes del cliente constantemente
 		bzero(buffer, BUFSIZE);
+		// Actualizar actividad del cliente
+		time(&serverTime);
+
 		int received = recv(socket, buffer, BUFSIZE, 0);
 
 		if (received > 0)
 		{
+			if (dict.count(cid) > 0)
+				dict[cid].SetHoraUltimoMensaje(serverTime);
 
 			if (*buffer == '#') {
 				printf("\nSERVER - Me pierdes cliente...\nSERVER - F en el chat amigos\n");
@@ -49,9 +53,6 @@ void Clithread::ManageClient()
 			}
 			else
 			{
-				// Actualizar actividad del cliente
-				time(&serverTime);
-				user.SetHoraUltimoMensaje(serverTime);
 				ManageProtoOption();
 			}
 		}
@@ -210,6 +211,7 @@ void Clithread::Synchronize(string username, string ip = "")
 		user.ip = ip;
 		user.socket = socket;
 		user.SetHoraUltimoMensaje(serverTime);
+		user.reallyInactive = false;
 	}
 
 
@@ -276,7 +278,7 @@ void Clithread::SendConnectedUsers(int userId, string username = "")
 	    	// Obtener el usuario del diccionario
 			Usuario u = itr->second;
 
-			cout << "USER: " << u.user << "\tSTATUS: " << u.estado << "\tIP: " << u.ip << endl;
+			cout << "\tUSER: " << u.user << "\tSTATUS: " << u.estado << "\tIP: " << u.ip << endl;
 
 			// Armar el usuario y agregarlo al response
 			ConnectedUser* connectedUser = response->add_connectedusers();
@@ -297,8 +299,6 @@ void Clithread::SendConnectedUsers(int userId, string username = "")
 		// Preparar y enviar el mensaje
 		string binary;
 		sm.SerializeToString(&binary);
-
-		cout << "ESTE ES EL BINARY STRING: " << binary << endl;
 
 		char cstr[binary.size() + 1];
 	    strcpy(cstr, binary.c_str());
@@ -325,6 +325,13 @@ void Clithread::ChangeUserStatus(string newStatus)
 {
 	cout << "SERVER - Se actualizo el estado de " << dict[cid].estado << " a " << newStatus << endl;
 	dict[cid].estado = newStatus;
+
+	// Poner bandera si realmente está inactivo
+	if (newStatus == "INACTIVO")
+		dict[cid].reallyInactive = true;
+	else
+		dict[cid].reallyInactive = false;
+
 
 	ChangeStatusResponse * response(new ChangeStatusResponse);
 	response->set_userid(cid);
@@ -439,7 +446,7 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 		}
 		else
 		{
-			printf("Server - El username especificado no existe!\n");
+			printf("SERVER - El username especificado no existe!\n");
 			SendError(cid, "Specified username doesn't exist.");
 		}
 		userFound = true;
@@ -661,6 +668,8 @@ void Clithread::UpdateUsersStatus()
 			// Actualizar el estado del usuario si cumple con los requisitos
 			dict[itrid].estado = "INACTIVO";
 		}
+		if (difftime(actualTime, lastActivity) < inactiveTime && u.estado != "OCUPADO" && !u.reallyInactive)
+			dict[itrid].estado = "ACTIVO";
 	}
 }
 
