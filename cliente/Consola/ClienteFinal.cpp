@@ -50,6 +50,7 @@ Mensaje::Mensaje(string usuarioP,string mensajeP)
 map<int,Mensaje*> mensajes;
 map<string,vector<Mensaje*>> mensajesPrivados;
 vector<string> usuariosConectadosLista;
+vector<int> idUsuariosConectadosLista;
 int contador=0,n2 = 1;
 int cantidadUsuarios=0;
 int sockfd;
@@ -657,6 +658,16 @@ void cambiarEstado(int estado,int sockfd)
     }
 
 }
+string getNombreUsuario(int id)
+{
+    for (int i = 0; i < idUsuariosConectadosLista.size(); ++i)
+    {
+        if(idUsuariosConectadosLista[i]==id)
+        {
+            return usuariosConectadosLista[i];
+        }
+    }
+}
 
 void *escucha(void *arg){
     while(n2 != 0){
@@ -680,14 +691,13 @@ void *escucha(void *arg){
         //broadcast
         if(option2 == 1)
         {
-            mvprintw(6, 0,"Entra");
-            refresh();
-            sleep(10);
 
-            if(!(sm2.broadcast().userid()==userIdGlobal))
+
+            int idUsuario=sm2.broadcast().userid();
+            if(!(idUsuario==userIdGlobal))
             {
                 //nuevoMensaje(string usuario,string mensaje,int sockfd)
-                nuevoMensaje("Prueba",sm2.broadcast().message(),sockfd);
+                nuevoMensaje(getNombreUsuario(idUsuario),sm2.broadcast().message(),sockfd);
             }
             
 
@@ -729,11 +739,13 @@ void *escucha(void *arg){
             for(int i=0;i<cantidadUsuarios;i++)
             {
                 string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
+                int idIter=sm2.connecteduserresponse().connectedusers(i).userid();
                 
                 if(mensajesPrivados.find(nombreIter)==mensajesPrivados.end())
                 {
                     nuevoMensajePrivado(nombreIter);
                     usuariosConectadosLista.push_back(nombreIter);
+                    idUsuariosConectadosLista.push_back(idIter);
                 }
 
                 
@@ -923,6 +935,7 @@ int main(int argc, char *argv[]) {
     timeout(100);  // wait 100 milliseconds for input
 
 
+
     while (n2 != 0) {
         erase();
 
@@ -972,11 +985,13 @@ int main(int argc, char *argv[]) {
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=7;
+                        actualizarBandejaPrivada();
                     }
                     else if(opcionMenuPrincipal==3)
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=2;
+                        actualizarBandejaPrivada();
                     }
                     else if(opcionMenuPrincipal==4)
                     {
@@ -988,6 +1003,7 @@ int main(int argc, char *argv[]) {
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=8;
+                        actualizarBandejaPrivada();
                     }
                     else if(opcionMenuPrincipal==6) n2=0;
                 }
