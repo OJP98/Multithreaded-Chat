@@ -441,6 +441,10 @@ void mensajeglobal(string msj,int sockfd){
     {
         string mensaje= sm5.broadcast().message();
         cout << "Mensaje: " <<mensaje<< endl;
+    }else if (option4 == 3)
+    {
+        string errorMensaje= sm5.error().errormessage();
+        cout << "El error es: " <<errorMensaje<< endl;
     }
 }
 void mensajeprivado(string msj, string usrName ,int sockfd){
@@ -472,6 +476,10 @@ void mensajeprivado(string msj, string usrName ,int sockfd){
 		int userId=sm7.message().userid();
 		string nombreUsuario= sm7.message().username();
 
+    }else if (option7 == 3)
+    {
+        string errorMensaje= sm7.error().errormessage();
+        cout << "El error es: " <<errorMensaje<< endl;
     }
 	
 }
@@ -514,6 +522,10 @@ void cambiarEstado(int estado,int sockfd)
         mvprintw(6, 0,"Estado Actualizado");
         refresh();
         sleep(1);
+    }else if (option2 == 3)
+    {
+        string errorMensaje= sm2.error().errormessage();
+        cout << "El error es: " <<errorMensaje<< endl;
     }
 
 }
