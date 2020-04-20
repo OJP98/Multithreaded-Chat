@@ -416,7 +416,7 @@ void *spammer(void *arg){
 
 void mensajeglobal(string msj,int sockfd){
 
-	sleep(5);
+	//sleep(5);
     BroadcastRequest * messageRequest(new BroadcastRequest);
 	messageRequest->set_message(msj);
 
@@ -443,13 +443,12 @@ void mensajeglobal(string msj,int sockfd){
         cout << "Mensaje: " <<mensaje<< endl;
     }
 }
-void mensajeprivado(string msj, int idUsuario, string usrName ,int sockfd){
+void mensajeprivado(string msj, string usrName ,int sockfd){
 
-	sleep(5);
+	//sleep(5);
     DirectMessageRequest * dm(new DirectMessageRequest);
 
 	dm->set_message(msj);
-	dm->set_userid(idUsuario);
 	dm->set_username(usrName);
 	ClientMessage m7;
 	m7.set_option(5);
@@ -515,6 +514,59 @@ void cambiarEstado(int estado,int sockfd)
         mvprintw(6, 0,"Estado Actualizado");
         refresh();
         sleep(1);
+    }
+
+}
+
+void getUsuariosConectados(int sockfd)
+{
+
+    connectedUserRequest * usuariosConectados(new connectedUserRequest);
+
+    // IF userId 0 RETURN ALL CONNECTED USERS
+    usuariosConectados->set_userid(0);
+
+    ClientMessage m;
+    m.set_option(2);
+    m.set_allocated_connectedusers(usuariosConectados);
+
+    // Se serializa el message a string
+    string binary3;
+    m.SerializeToString(&binary3);
+
+    char cstr3[binary3.size() + 1];
+    strcpy(cstr3, binary3.c_str());
+
+    send(sockfd, cstr3, strlen(cstr3), 0);
+
+    char buffer2[BUFSIZE];
+    // Esperar respuesta del servidor
+    bzero(buffer2, BUFSIZE);
+    recv(sockfd, buffer2, BUFSIZE, 0);
+
+    string ret(buffer2, BUFSIZE);
+    ServerMessage sm2;
+    sm2.ParseFromString(buffer2);
+    int option2 = sm2.option();
+
+    // MANEJAR MY INFO RESPONSE
+    if (option2 == 5)
+    {
+        int cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
+        mvprintw(6, 0,"cantidad de Usuarios %d",cantidadUsuarios);
+        refresh();
+
+        for(int i=0;i<cantidadUsuarios;i++)
+        {
+            string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
+
+            char nombreChar[nombreIter.size() + 1];
+            strcpy(nombreChar, nombreIter.c_str());
+
+            mvprintw(7+i, 0,"%s",nombreChar);
+
+        }
+        
     }
 
 }
@@ -640,7 +692,7 @@ int main(int argc, char *argv[]) {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
     mensajeglobal("hola",sockfd);
-    mensajeprivado(hola,1,prueba1,sockfd)
+    mensajeprivado("hola","usuarioPrueba",sockfd);
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -723,7 +775,12 @@ int main(int argc, char *argv[]) {
                 }
                 else if (ch=='\n') 
                 {
-                    if(opcionMenuPrincipal==2)
+                    if(opcionMenuPrincipal==1)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=9;
+                    }
+                    else if(opcionMenuPrincipal==2)
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=7;
@@ -941,9 +998,60 @@ int main(int argc, char *argv[]) {
                     *s = 0;
                 }
             }
-            
-                
+        
 
+        }
+        else if(numPantalla==9)
+        {
+            getUsuariosConectados(sockfd);
+            refresh();
+            if ((ch = getch()) != ERR) 
+            {
+                if (ch == 27) {
+                    //si presiona [ESC]
+                    n2=0;
+                }
+                else if(ch==KEY_UP)
+                {
+                    if(opcionMenuPrincipal--<=1) opcionMenuPrincipal=6;
+
+                }
+                else if(ch==KEY_DOWN)
+                {
+                    if(opcionMenuPrincipal++>=6) opcionMenuPrincipal=1;
+                    
+                }
+                else if (ch=='\n') 
+                {
+                    if(opcionMenuPrincipal==1)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=9;
+                    }
+                    else if(opcionMenuPrincipal==2)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=7;
+                    }
+                    else if(opcionMenuPrincipal==3)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=2;
+                    }
+                    else if(opcionMenuPrincipal==4)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=5;
+                    }
+                    else if(opcionMenuPrincipal==5)
+                    {
+                        opcionMenuPrincipal=1;
+                        numPantalla=8;
+                    }
+                    else if(opcionMenuPrincipal==6) n2=0;
+                }
+
+            }
         }
 
         
