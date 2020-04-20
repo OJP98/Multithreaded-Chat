@@ -447,6 +447,40 @@ void mensajeglobal(string msj,int sockfd){
         cout << "El error es: " <<errorMensaje<< endl;
     }
 }
+
+void mensajeglobalStatus(string msj,int sockfd){
+
+	//sleep(5);
+    BroadcastRequest * messageRequest(new BroadcastRequest);
+	messageRequest->set_message(msj);
+
+	ClientMessage m5;
+	m5.set_option(4);
+	m5.set_allocated_broadcast(messageRequest);
+
+	string binary4;
+    m5.SerializeToString(&binary4);
+    char cstr4[binary4.size() + 1];
+    strcpy(cstr4, binary4.c_str());
+    send(sockfd, cstr4, strlen(cstr4), 0);
+    char buffer4[BUFSIZE];
+    bzero(buffer4, BUFSIZE);
+    recv(sockfd, buffer4, BUFSIZE, 0);
+    string ret(buffer4, BUFSIZE);
+    ServerMessage sm5;
+    sm5.ParseFromString(buffer4);
+    int option4 = sm5.option();
+
+    if (option4 == 7)
+    {
+        string mensaje= sm5.broadcastresponse().messagestatus();
+    }else if (option4 == 3)
+    {
+        string errorMensaje= sm5.error().errormessage();
+        cout << "El error es: " <<errorMensaje<< endl;
+    }
+}
+
 void mensajeprivado(string msj, string usrName ,int sockfd){
 
 	//sleep(5);
@@ -476,6 +510,42 @@ void mensajeprivado(string msj, string usrName ,int sockfd){
 		int userId=sm7.message().userid();
 		string nombreUsuario= sm7.message().username();
 
+    }else if (option7 == 3)
+    {
+        string errorMensaje= sm7.error().errormessage();
+        cout << "El error es: " <<errorMensaje<< endl;
+    }
+	
+}
+
+
+
+void mensajeprivadoStatus(string msj, string usrName ,int sockfd){
+
+	//sleep(5);
+    DirectMessageRequest * dm(new DirectMessageRequest);
+
+	dm->set_message(msj);
+	dm->set_username(usrName);
+	ClientMessage m7;
+	m7.set_option(5);
+	m7.set_allocated_directmessage(dm);
+
+	string binary7;
+    m7.SerializeToString(&binary7);
+    char cstr7[binary7.size() + 1];
+    strcpy(cstr7, binary7.c_str());
+    send(sockfd, cstr7, strlen(cstr7), 0);
+    char buffer7[BUFSIZE];
+    bzero(buffer7, BUFSIZE);
+    recv(sockfd, buffer7, BUFSIZE, 0);
+    string ret(buffer7, BUFSIZE);
+    ServerMessage sm7;
+    sm7.ParseFromString(buffer7);
+    int option7 = sm7.option();
+    if (option7 == 8)
+    {
+    	string mensaje= sm7.directmessageresponse().messagestatus();
     }else if (option7 == 3)
     {
         string errorMensaje= sm7.error().errormessage();
@@ -704,7 +774,9 @@ int main(int argc, char *argv[]) {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
     mensajeglobal("hola",sockfd);
+    mensajeglobalStatus("hola",sockfd);
     mensajeprivado("hola","usuarioPrueba",sockfd);
+    mensajeprivadoStatus("hola","usuarioPrueba",sockfd);
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
