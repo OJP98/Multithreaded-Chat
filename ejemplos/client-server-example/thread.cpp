@@ -91,8 +91,9 @@ void Clithread::ManageProtoOption()
 	// CONNECTED USERS
 	else if(option == 2)
 	{
-		int cm_userId = -1;
+		int cm_userId = 0;
 		string cm_username = "";
+
 		if (cm.connectedusers().has_userid())
 			cm_userId = cm.connectedusers().userid();
 
@@ -230,43 +231,8 @@ void Clithread::SendConnectedUsers(int userId, string username = "")
 	ServerMessage sm;
 	sm.set_option(5);
 
-	// Todos los usuarios
-	if (userId == 0)
-	{
-		map<int, Usuario>::iterator itr; 
-	    for (itr = dict.begin(); itr != dict.end(); ++itr)
-	    { 
-
-	    	// Obtener el id del usuario iterado
-	    	int itrUserId = itr->first;
-	    	// Obtener el usuario del diccionario
-			Usuario u = itr->second;
-
-			// Armar el usuario y agregarlo al response
-			ConnectedUser* connectedUser = response->add_connectedusers();
-			connectedUser->set_username(u.user);
-			connectedUser->set_status(u.estado);
-			connectedUser->set_ip(u.ip);
-	    }
-
-	    isDone = true;
-	}
-
-	// Usuario específico, si existe...
-	else if (userId > 0 && dict.count(userId) > 0)
-	{
-		Usuario u = dict[userId];
-
-		ConnectedUser* connectedUser = response->add_connectedusers();
-		connectedUser->set_username(u.user);
-		connectedUser->set_status(u.estado);
-		connectedUser->set_ip(u.ip);
-
-		isDone = true;
-	}
-
 	// Buscar por username
-	if (username.compare("") != 0 && !isDone)
+	if (username.compare("") != 0)
 	{
 		int destUserId = GetUsernameId(username);
 
@@ -277,43 +243,81 @@ void Clithread::SendConnectedUsers(int userId, string username = "")
 			ConnectedUser* connectedUser = response->add_connectedusers();
 			connectedUser->set_username(u.user);
 			connectedUser->set_status(u.estado);
+			connectedUser->set_userid(destUserId);
 			connectedUser->set_ip(u.ip);
-		}
 
-		// De lo contario, enviar error
-		else
-		{
-			printf("Server - El username especificado no existe!\n");
-			SendError(cid, "Specified username doesn't exist.");
+			isDone = true;
 		}
+	}
+
+	// Usuario específico, si existe...
+	if (userId > 0 && dict.count(userId) > 0 && !isDone)
+	{
+		Usuario u = dict[userId];
+
+		ConnectedUser* connectedUser = response->add_connectedusers();
+		connectedUser->set_username(u.user);
+		connectedUser->set_status(u.estado);
+		connectedUser->set_userid(userId);
+		connectedUser->set_ip(u.ip);
 
 		isDone = true;
 	}
 
+	// Todos los usuarios
+	if (userId == 0 && !isDone)
+	{
+		cout << "Los usuarios son los siguientes: " << endl;
+		map<int, Usuario>::iterator itr; 
+	    for (itr = dict.begin(); itr != dict.end(); ++itr)
+	    {
+	    	// Obtener el id del usuario iterado
+	    	int itrUserId = itr->first;
+	    	// Obtener el usuario del diccionario
+			Usuario u = itr->second;
+
+			cout << "USER: " << u.user << "\tSTATUS: " << u.estado << "\tIP: " << u.ip << endl;
+
+			// Armar el usuario y agregarlo al response
+			ConnectedUser* connectedUser = response->add_connectedusers();
+			connectedUser->set_username(u.user);
+			connectedUser->set_status(u.estado);
+			connectedUser->set_userid(itrUserId);
+			connectedUser->set_ip(u.ip);
+	    }
+
+	    isDone = true;
+	}
+
+	if (isDone)
+	{
+		// Alojar la respuesta
+		sm.set_allocated_connecteduserresponse(response);
+
+		// Preparar y enviar el mensaje
+		string binary;
+		sm.SerializeToString(&binary);
+
+		cout << "ESTE ES EL BINARY STRING: " << binary << endl;
+
+		char cstr[binary.size() + 1];
+	    strcpy(cstr, binary.c_str());
+
+		// Enviar el mensaje serializado al cliente.
+		int sent = send(socket, cstr, strlen(cstr), 0);
+		if (sent == 0)
+		{
+			fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
+			closeConnection = true;
+		}
+		else
+			printf("SERVER - Los usuarios conectados fueron enviados al cliente\n");
+	}
+
 	// Si nada cumple, enviar error
-	else if (!isDone)
+	else
 		SendError(cid, "Server couldn't match id nor username.");
 
-
-	// Alojar la respuesta
-	sm.set_allocated_connecteduserresponse(response);
-
-	// Preparar y enviar el mensaje
-	string binary;
-	sm.SerializeToString(&binary);
-
-	char cstr[binary.size() + 1];
-    strcpy(cstr, binary.c_str());
-
-	// Enviar el mensaje serializado al cliente.
-	int sent = send(socket, cstr, strlen(cstr), 0);
-	if (sent == 0)
-	{
-		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
-		closeConnection = true;
-	}
-	else
-		printf("SERVER - Los usuarios conectados fueron enviados al cliente\n");
 }
 
 
@@ -400,7 +404,7 @@ void Clithread::SendBroadcastMessage(string message)
     strcpy(rstr, resp.c_str());
 
     // Enviar el response al cliente.
-	int sent = send(socket, cstr, strlen(cstr), 0);
+	int sent = send(socket, rstr, strlen(rstr), 0);
 	if (sent == 0)
 	{
 		fprintf(stderr, "ERROR al enviar respuesta del server al cliente.\n");
@@ -448,8 +452,10 @@ void Clithread::SendPrivateMessage(string message, int userId, string username)
 		// Enviar mensaje al cliente solicitado
 		DirectMessage * dm(new DirectMessage);
 		dm->set_message(message);
-		dm->set_userid(userId);
-		dm->set_username(username);
+
+		// Enviar id y user del cliente que manda el direct message
+		dm->set_userid(cid);
+		dm->set_username(user.user);
 
 		ServerMessage newSM;
 		newSM.set_option(2);

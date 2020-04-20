@@ -103,12 +103,12 @@ int main(int argc, char *argv[])
 
 	if (1)
 	{
-
 		string ret(buffer, BUFSIZE);
 	}
 	ServerMessage sm;
 	sm.ParseFromString(buffer);
 	int option = sm.option();
+
 
 	// MANEJAR MY INFO RESPONSE
 	if (option == 4)
@@ -141,8 +141,6 @@ int main(int argc, char *argv[])
 
 
 
-
-
 	sleep(5);
 
 
@@ -153,12 +151,14 @@ int main(int argc, char *argv[])
 
 
 	// Se crea instancia de Mensaje, se setea los valores deseados
-	ChangeStatusRequest * statusRequest(new ChangeStatusRequest);
-	statusRequest->set_status("OCUPADO");
+	connectedUserRequest * usersRequest(new connectedUserRequest);
+	usersRequest->set_userid(0);
+	// usersRequest->set_username(argv[1]);
+
 
 	ClientMessage m3;
-	m3.set_option(3);
-	m3.set_allocated_changestatus(statusRequest);
+	m3.set_option(2);
+	m3.set_allocated_connectedusers(usersRequest);
 
 	// Se serializa el message a string
 	string binary3;
@@ -181,11 +181,11 @@ int main(int argc, char *argv[])
 	sm2.ParseFromString(buffer2);
 	int option2 = sm2.option();
 
-	// MANEJAR MY INFO RESPONSE
-	if (option2 == 6)
+	// MANEJAR ERRORES DE PARTE DEL CLIENTE
+	if (option2 == 3)
 	{
-		string userStatus = sm2.changestatusresponse().status();
-		cout << "MY NUEVO STATUS ES: " << userStatus << endl;
+		string errorMessage = sm2.error().errormessage();
+		cout << "El error es: " << errorMessage << endl;
 	}
 
 

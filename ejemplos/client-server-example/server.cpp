@@ -27,12 +27,11 @@ struct sockaddr_in serv_addr;
 pthread_t threadPool[MAX_CLIENTS];
 void * retvals[MAX_CLIENTS];
 
-Usuario nuevoUsuario("TEST","69.0.0.1",69);
+// Diccionario de usuarios
+// Usuario nuevoUsuario("TEST","69.0.0.1",69);
 
 // Diccionario de usuarios
-std::map<int, Usuario> Clithread::dict = {
-	{69, nuevoUsuario}
-};
+std::map<int, Usuario> Clithread::dict = {};
 
 void error(const char *msg)
 {
