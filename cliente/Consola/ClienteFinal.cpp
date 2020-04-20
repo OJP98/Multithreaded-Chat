@@ -921,8 +921,8 @@ int main(int argc, char *argv[]) {
 
     timeout(100);  // wait 100 milliseconds for input
 
-
-
+    // Actualizar antes del while
+    actualizarBandejaPrivada();
     while (n2 != 0) {
         erase();
 
