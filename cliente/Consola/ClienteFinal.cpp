@@ -53,6 +53,7 @@ vector<string> usuariosConectadosLista;
 int contador=0,n2 = 1;
 int cantidadUsuarios=0;
 int sockfd;
+int userIdGlobal=0;
 
 string nombreUsuarioBuscado;
 string statusUsuarioBuscado;
@@ -495,23 +496,7 @@ void mensajeglobal(string msj,int sockfd){
     char cstr4[binary4.size() + 1];
     strcpy(cstr4, binary4.c_str());
     send(sockfd, cstr4, strlen(cstr4), 0);
-    char buffer4[BUFSIZE];
-    bzero(buffer4, BUFSIZE);
-    recv(sockfd, buffer4, BUFSIZE, 0);
-    string ret(buffer4, BUFSIZE);
-    ServerMessage sm5;
-    sm5.ParseFromString(buffer4);
-    int option4 = sm5.option();
-
-    if (option4 == 1)
-    {
-        string mensaje= sm5.broadcast().message();
-        cout << "Mensaje: " <<mensaje<< endl;
-    }else if (option4 == 3)
-    {
-        string errorMensaje= sm5.error().errormessage();
-        cout << "El error es: " <<errorMensaje<< endl;
-    }
+    
 }
 
 void mensajeglobalStatus(string msj,int sockfd){
@@ -529,22 +514,7 @@ void mensajeglobalStatus(string msj,int sockfd){
     char cstr4[binary4.size() + 1];
     strcpy(cstr4, binary4.c_str());
     send(sockfd, cstr4, strlen(cstr4), 0);
-    char buffer4[BUFSIZE];
-    bzero(buffer4, BUFSIZE);
-    recv(sockfd, buffer4, BUFSIZE, 0);
-    string ret(buffer4, BUFSIZE);
-    ServerMessage sm5;
-    sm5.ParseFromString(buffer4);
-    int option4 = sm5.option();
-
-    if (option4 == 7)
-    {
-        string mensaje= sm5.broadcastresponse().messagestatus();
-    }else if (option4 == 3)
-    {
-        string errorMensaje= sm5.error().errormessage();
-        cout << "El error es: " <<errorMensaje<< endl;
-    }
+    
 }
 
 void mensajeprivado(string msj, string usrName ,int sockfd){
@@ -563,24 +533,7 @@ void mensajeprivado(string msj, string usrName ,int sockfd){
     char cstr7[binary7.size() + 1];
     strcpy(cstr7, binary7.c_str());
     send(sockfd, cstr7, strlen(cstr7), 0);
-    char buffer7[BUFSIZE];
-    bzero(buffer7, BUFSIZE);
-    recv(sockfd, buffer7, BUFSIZE, 0);
-    string ret(buffer7, BUFSIZE);
-    ServerMessage sm7;
-    sm7.ParseFromString(buffer7);
-    int option7 = sm7.option();
-    if (option7 == 2)
-    {
-    	string mensaje= sm7.message().message();
-		int userId=sm7.message().userid();
-		string nombreUsuario= sm7.message().username();
-
-    }else if (option7 == 3)
-    {
-        string errorMensaje= sm7.error().errormessage();
-        cout << "El error es: " <<errorMensaje<< endl;
-    }
+    
 	
 }
 
@@ -625,13 +578,19 @@ void mensajeprivadoStatus(string msj, string usrName ,int sockfd){
 //~~~~~~~~~~~~~~~~~~~~~~~~
 void nuevoMensaje(string usuario,string mensaje,int sockfd)
 {
-    mensajeglobal(mensaje,sockfd);
+    
     mensajes[contador++]=new Mensaje(usuario,mensaje);
+}
+
+void enviarNuevoMensaje(string usuario,string mensaje,int sockfd)
+{
+    mensajeglobal(mensaje,sockfd);
+    nuevoMensaje(usuario,mensaje,sockfd);
 }
 
 void nuevoMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
 {
-    mensajeprivado(mensaje,bandejaUsuario,sockfd);
+    //mensajeprivado(mensaje,bandejaUsuario,sockfd);
     if(mensajesPrivados.find(bandejaUsuario)==mensajesPrivados.end())
     {
         vector<Mensaje*> vect; 
@@ -644,6 +603,12 @@ void nuevoMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
         mensajesPrivados.at(bandejaUsuario).push_back(new Mensaje(usuario,mensaje));
     }
  
+}
+
+void enviarMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
+{
+    mensajeprivado(mensaje,bandejaUsuario,sockfd);
+    nuevoMensajePrivado(bandejaUsuario, usuario,mensaje);
 }
 
 void cambiarEstado(int estado,int sockfd)
@@ -695,7 +660,7 @@ void cambiarEstado(int estado,int sockfd)
 void *escucha(void *arg){
     while(n2 != 0){
 
-        sleep(5);
+        //sleep(5);
 
         char buffer2[BUFSIZE];
         // Esperar respuesta del servidor
@@ -707,8 +672,46 @@ void *escucha(void *arg){
         sm2.ParseFromString(buffer2);
         int option2 = sm2.option();
 
+
+
+    
+
+        //broadcast
+        if(option2 == 1)
+        {
+            mvprintw(6, 0,"Entra");
+            refresh();
+            sleep(10);
+
+            if(!(sm2.broadcast().userid()==userIdGlobal))
+            {
+                //nuevoMensaje(string usuario,string mensaje,int sockfd)
+                nuevoMensaje("Prueba",sm2.broadcast().message(),sockfd);
+            }
+            
+
+        }
+        //Mensaje privado
+        
+        else if (option2 == 2)
+        {
+            string mensaje= sm2.message().message();
+            int userId=sm2.message().userid();
+            string nombreUsuario= sm2.message().username();
+            nuevoMensajePrivado(nombreUsuario, nombreUsuario,mensaje);
+
+        }
+
+
+
+        //Manejo de errores
+        else if (option2 == 3)
+        {
+            string errorMensaje= sm2.error().errormessage();
+            cout << "El error es: " <<errorMensaje<< endl;
+        }
         // MANEJAR MY INFO RESPONSE
-        if (option2 == 5)
+        else if (option2 == 5)
         {
             cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
 
@@ -753,7 +756,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[]) {
 
-    int portno, n, userId;
+    int portno, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
     bool salir = false;
@@ -837,15 +840,15 @@ int main(int argc, char *argv[]) {
     // MANEJAR MY INFO RESPONSE
     if (option == 4)
     {
-        userId = sm.myinforesponse().userid();
-        cout << "MY ID ES: " << userId << endl;
+        userIdGlobal = sm.myinforesponse().userid();
+        cout << "MY ID ES: " << userIdGlobal << endl;
 
 
         //          3. HACER SABER AL SERVIDOR QUE ESTAMOS LISTOS
 
         // Se crea instancia tipo MyInfoAcknowledge
         MyInfoAcknowledge * ack(new MyInfoAcknowledge);
-        ack->set_userid(userId);
+        ack->set_userid(userIdGlobal);
 
         // Se crea instancia de Mensaje, se setea los valores deseados
         ClientMessage m2;
@@ -1013,7 +1016,7 @@ int main(int argc, char *argv[]) {
                 if (ch == '\n') {
                     //esto se ejecuta al presionar enter
                     if(strlen(buf)>0)
-                        nuevoMensaje(argv[1],string(buf),sockfd);
+                        enviarNuevoMensaje(argv[1],string(buf),sockfd);
 
                     *s = 0;
                     sscanf(buf, "%d", &n2);
@@ -1091,7 +1094,8 @@ int main(int argc, char *argv[]) {
                 if (ch == '\n') {
                     //esto se ejecuta al presionar enter
                     if(strlen(buf)>0)
-                        nuevoMensajePrivado(getNombreChat(posBandejaPrivada),"TU TATA",string(buf));
+                        enviarMensajePrivado(getNombreChat(posBandejaPrivada),argv[1],string(buf));
+
                                         
 
                     *s = 0;
