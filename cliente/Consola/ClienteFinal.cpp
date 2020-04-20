@@ -414,6 +414,69 @@ void *spammer(void *arg){
     }
 }
 
+void mensajeglobal(string msj,int sockfd){
+
+	sleep(5);
+    BroadcastRequest * messageRequest(new BroadcastRequest);
+	messageRequest->set_message(msj);
+
+	ClientMessage m5;
+	m5.set_option(4);
+	m5.set_allocated_broadcast(messageRequest);
+
+	string binary4;
+    m5.SerializeToString(&binary4);
+    char cstr4[binary4.size() + 1];
+    strcpy(cstr4, binary4.c_str());
+    send(sockfd, cstr4, strlen(cstr4), 0);
+    char buffer4[BUFSIZE];
+    bzero(buffer4, BUFSIZE);
+    recv(sockfd, buffer4, BUFSIZE, 0);
+    string ret(buffer4, BUFSIZE);
+    ServerMessage sm5;
+    sm5.ParseFromString(buffer4);
+    int option4 = sm5.option();
+
+    if (option4 == 1)
+    {
+        string mensaje= sm5.broadcast().message();
+        cout << "Mensaje: " <<mensaje<< endl;
+    }
+}
+void mensajeprivado(string msj, int idUsuario, string usrName ,int sockfd){
+
+	sleep(5);
+    DirectMessageRequest * dm(new DirectMessageRequest);
+
+	dm->set_message(msj);
+	dm->set_userid(idUsuario);
+	dm->set_username(usrName);
+	ClientMessage m7;
+	m7.set_option(5);
+	m7.set_allocated_directmessage(dm);
+
+	string binary7;
+    m7.SerializeToString(&binary7);
+    char cstr7[binary7.size() + 1];
+    strcpy(cstr7, binary7.c_str());
+    send(sockfd, cstr7, strlen(cstr7), 0);
+    char buffer7[BUFSIZE];
+    bzero(buffer7, BUFSIZE);
+    recv(sockfd, buffer7, BUFSIZE, 0);
+    string ret(buffer7, BUFSIZE);
+    ServerMessage sm7;
+    sm7.ParseFromString(buffer7);
+    int option7 = sm7.option();
+    if (option7 == 2)
+    {
+    	string mensaje= sm7.message().message();
+		int userId=sm7.message().userid();
+		string nombreUsuario= sm7.message().username();
+
+    }
+	
+}
+
 void cambiarEstado(int estado,int sockfd)
 {
     string posiblesEstados[]={"ACTIVO","OCUPADO","INACTIVO"};
@@ -573,16 +636,11 @@ int main(int argc, char *argv[]) {
         send(sockfd, cstr2, strlen(cstr2), 0);
 
     }
-
-///////////////////////////////////////////////
-
-///////////////////////////////////Cambio de estado////////////////////////////////////////////////////////////
     
-    
-
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-
+    mensajeglobal("hola",sockfd);
+    mensajeprivado(hola,1,prueba1,sockfd)
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
