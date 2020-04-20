@@ -17,6 +17,8 @@
 #include <map>
 #include <vector>
 
+#include <algorithm>
+
 using namespace std;
 using namespace chat;
 using namespace google::protobuf;
@@ -715,11 +717,15 @@ void *escucha(void *arg){
 
             }
 
-
+            vector<string> nombreUsuariosListTemporal;
+            vector<int> idUsuariosListTemporal;
             for(int i=0;i<cantidadUsuarios;i++)
             {
                 string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
                 int idIter=sm2.connecteduserresponse().connectedusers(i).userid();
+
+                nombreUsuariosListTemporal.push_back(nombreIter);
+                idUsuariosListTemporal.push_back(idIter);
                 
                 if(mensajesPrivados.find(nombreIter)==mensajesPrivados.end())
                 {
@@ -727,11 +733,20 @@ void *escucha(void *arg){
                     usuariosConectadosLista.push_back(nombreIter);
                     idUsuariosConectadosLista.push_back(idIter);
                 }
-
-                
-                
-
             }
+
+            for (int i = 0; i < usuariosConectadosLista.size(); ++i)
+            {
+                vector<string>::iterator it = find(nombreUsuariosListTemporal.begin(), nombreUsuariosListTemporal.end(), usuariosConectadosLista[i]);
+                if(it==nombreUsuariosListTemporal.end())
+                {
+                    usuariosConectadosLista.erase(usuariosConectadosLista.begin()+i);
+                    idUsuariosConectadosLista.erase(idUsuariosConectadosLista.begin()+i);
+                    mensajesPrivados.erase(usuariosConectadosLista[i]);
+                }
+            }
+
+
             
         }
         // MANEJAR MY INFO RESPONSE
