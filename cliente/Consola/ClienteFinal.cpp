@@ -49,7 +49,9 @@ Mensaje::Mensaje(string usuarioP,string mensajeP)
 
 map<int,Mensaje*> mensajes;
 map<string,vector<Mensaje*>> mensajesPrivados;
+vector<string> usuariosConectadosLista;
 int contador=0,n2 = 1;
+int cantidadUsuarios=0;
 
 
 //########################
@@ -395,10 +397,133 @@ void printAyuda()
     attroff(COLOR_PAIR(2));
     mvprintw(23,0,  "");
     
-/*
-    Chat privado: Permite al usuario contactar con otro usuario conectado para poder tener conversaciones privadas");
+}
 
-      */
+void getUsuariosConectados(int sockfd,int posicionUsuariosConectados)
+{
+
+    usuariosConectadosLista.clear();
+    connectedUserRequest * usuariosConectados(new connectedUserRequest);
+
+    // IF userId 0 RETURN ALL CONNECTED USERS
+    usuariosConectados->set_userid(0);
+
+    ClientMessage m;
+    m.set_option(2);
+    m.set_allocated_connectedusers(usuariosConectados);
+
+    // Se serializa el message a string
+    string binary3;
+    m.SerializeToString(&binary3);
+
+    char cstr3[binary3.size() + 1];
+    strcpy(cstr3, binary3.c_str());
+
+    send(sockfd, cstr3, strlen(cstr3), 0);
+
+    char buffer2[BUFSIZE];
+    // Esperar respuesta del servidor
+    bzero(buffer2, BUFSIZE);
+    recv(sockfd, buffer2, BUFSIZE, 0);
+
+    string ret(buffer2, BUFSIZE);
+    ServerMessage sm2;
+    sm2.ParseFromString(buffer2);
+    int option2 = sm2.option();
+
+
+    // MANEJAR MY INFO RESPONSE
+    if (option2 == 5)
+    {
+        cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
+        mvprintw(0, 0,"Usuarios Conectados: %d",cantidadUsuarios);
+        
+        refresh();
+
+
+        for(int i=0;i<cantidadUsuarios;i++)
+        {
+            string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
+
+            usuariosConectadosLista.push_back(nombreIter);
+
+            char nombreChar[nombreIter.size() + 1];
+            strcpy(nombreChar, nombreIter.c_str());
+
+            if(i==posicionUsuariosConectados)
+            {
+                attron(COLOR_PAIR(1));
+                mvprintw(2+i, 0,"%s",nombreChar);
+                attroff(COLOR_PAIR(1));
+            }
+            else
+            {
+                mvprintw(2+i, 0,"%s",nombreChar);
+            }
+
+            
+
+        }
+        
+    }
+
+}
+
+void printInfoDeUsuario(int sockfd,int posicionUsuariosConectados)
+{
+    connectedUserRequest * usuariosConectados(new connectedUserRequest);
+
+    // IF userId 0 RETURN ALL CONNECTED USERS
+    usuariosConectados->set_username(usuariosConectadosLista[posicionUsuariosConectados]);
+
+    ClientMessage m;
+    m.set_option(2);
+    m.set_allocated_connectedusers(usuariosConectados);
+
+    // Se serializa el message a string
+    string binary3;
+    m.SerializeToString(&binary3);
+
+    char cstr3[binary3.size() + 1];
+    strcpy(cstr3, binary3.c_str());
+
+    send(sockfd, cstr3, strlen(cstr3), 0);
+
+    char buffer2[BUFSIZE];
+    // Esperar respuesta del servidor
+    bzero(buffer2, BUFSIZE);
+    recv(sockfd, buffer2, BUFSIZE, 0);
+
+    string ret(buffer2, BUFSIZE);
+    ServerMessage sm2;
+    sm2.ParseFromString(buffer2);
+    int option2 = sm2.option();
+
+
+    // MANEJAR MY INFO RESPONSE
+    if (option2 == 5)
+    {
+        string nombreIter=sm2.connecteduserresponse().connectedusers(0).username();
+        char nombreChar[nombreIter.size() + 1];
+        strcpy(nombreChar, nombreIter.c_str());
+        mvprintw(2, 0,"Nombre de usuario\t: %s",nombreChar);
+
+        string statusIter=sm2.connecteduserresponse().connectedusers(0).status();
+        char statusChar[statusIter.size() + 1];
+        strcpy(statusChar, statusIter.c_str());
+        mvprintw(3, 0,"Status de usuario\t: %s",statusChar);
+
+        int userId=sm2.connecteduserresponse().connectedusers(0).userid();
+        mvprintw(4, 0,"Id de Usuario\t\t: %d",userId);
+
+        string ipIter=sm2.connecteduserresponse().connectedusers(0).ip();
+        char ipChar[ipIter.size() + 1];
+        strcpy(ipChar, ipIter.c_str());
+        mvprintw(5, 0,"Status de usuario\t: %s",ipChar);
+                
+        refresh();
+        
+    }
 
 }
 
@@ -600,58 +725,7 @@ void cambiarEstado(int estado,int sockfd)
 
 }
 
-void getUsuariosConectados(int sockfd)
-{
 
-    connectedUserRequest * usuariosConectados(new connectedUserRequest);
-
-    // IF userId 0 RETURN ALL CONNECTED USERS
-    usuariosConectados->set_userid(0);
-
-    ClientMessage m;
-    m.set_option(2);
-    m.set_allocated_connectedusers(usuariosConectados);
-
-    // Se serializa el message a string
-    string binary3;
-    m.SerializeToString(&binary3);
-
-    char cstr3[binary3.size() + 1];
-    strcpy(cstr3, binary3.c_str());
-
-    send(sockfd, cstr3, strlen(cstr3), 0);
-
-    char buffer2[BUFSIZE];
-    // Esperar respuesta del servidor
-    bzero(buffer2, BUFSIZE);
-    recv(sockfd, buffer2, BUFSIZE, 0);
-
-    string ret(buffer2, BUFSIZE);
-    ServerMessage sm2;
-    sm2.ParseFromString(buffer2);
-    int option2 = sm2.option();
-
-    // MANEJAR MY INFO RESPONSE
-    if (option2 == 5)
-    {
-        int cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
-        mvprintw(6, 0,"cantidad de Usuarios %d",cantidadUsuarios);
-        refresh();
-
-        for(int i=0;i<cantidadUsuarios;i++)
-        {
-            string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
-
-            char nombreChar[nombreIter.size() + 1];
-            strcpy(nombreChar, nombreIter.c_str());
-
-            mvprintw(7+i, 0,"%s",nombreChar);
-
-        }
-        
-    }
-
-}
 
 void error(const char *msg)
 {
@@ -800,6 +874,8 @@ int main(int argc, char *argv[]) {
     int posBandejaPrivada=0; //opcion de bandeja privada
 
     int posCambioDeEstado=0;
+
+    int posUsuariosConectados=0;
 
     WINDOW *w;
  
@@ -1087,55 +1163,52 @@ int main(int argc, char *argv[]) {
         }
         else if(numPantalla==9)
         {
-            getUsuariosConectados(sockfd);
+            //Usuarios conectados
+            getUsuariosConectados(sockfd,posUsuariosConectados);
+            mvprintw(9, 0,"%d",posUsuariosConectados);
             refresh();
             if ((ch = getch()) != ERR) 
             {
                 if (ch == 27) {
                     //si presiona [ESC]
-                    n2=0;
+                    numPantalla=1;
+                    posUsuariosConectados=0;
                 }
                 else if(ch==KEY_UP)
                 {
-                    if(opcionMenuPrincipal--<=1) opcionMenuPrincipal=6;
+                    if(posUsuariosConectados--<=0) posUsuariosConectados=cantidadUsuarios-1;
 
                 }
                 else if(ch==KEY_DOWN)
                 {
-                    if(opcionMenuPrincipal++>=6) opcionMenuPrincipal=1;
+                    if(posUsuariosConectados++>=(cantidadUsuarios-1)) posUsuariosConectados=0;
                     
                 }
                 else if (ch=='\n') 
                 {
-                    if(opcionMenuPrincipal==1)
-                    {
-                        opcionMenuPrincipal=1;
-                        numPantalla=9;
-                    }
-                    else if(opcionMenuPrincipal==2)
-                    {
-                        opcionMenuPrincipal=1;
-                        numPantalla=7;
-                    }
-                    else if(opcionMenuPrincipal==3)
-                    {
-                        opcionMenuPrincipal=1;
-                        numPantalla=2;
-                    }
-                    else if(opcionMenuPrincipal==4)
-                    {
-                        opcionMenuPrincipal=1;
-                        numPantalla=5;
-                    }
-                    else if(opcionMenuPrincipal==5)
-                    {
-                        opcionMenuPrincipal=1;
-                        numPantalla=8;
-                    }
-                    else if(opcionMenuPrincipal==6) n2=0;
+                    numPantalla=10;
+                    
                 }
 
             }
+        }
+        else if(numPantalla==10)
+        {
+            mvprintw(0, 0,"Informacion personal");
+            printInfoDeUsuario(sockfd, posUsuariosConectados);
+            refresh();
+
+            if ((ch = getch()) != ERR) 
+            {
+                if (ch == 27) {
+                    //si presiona [ESC]
+                    numPantalla=9;
+                }
+
+
+            }
+
+
         }
 
         
