@@ -608,7 +608,8 @@ void nuevoMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
 void enviarMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
 {
     mensajeprivado(mensaje,bandejaUsuario,sockfd);
-    nuevoMensajePrivado(bandejaUsuario, usuario,mensaje);
+    if(bandejaUsuario!=usuario)
+        nuevoMensajePrivado(bandejaUsuario, usuario,mensaje);
 }
 
 void cambiarEstado(int estado,int sockfd)
