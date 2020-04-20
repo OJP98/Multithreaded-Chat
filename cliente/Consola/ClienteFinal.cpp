@@ -52,35 +52,17 @@ map<string,vector<Mensaje*>> mensajesPrivados;
 vector<string> usuariosConectadosLista;
 int contador=0,n2 = 1;
 int cantidadUsuarios=0;
+int sockfd;
+
+string nombreUsuarioBuscado;
+string statusUsuarioBuscado;
+int idUsuarioBuscado;
+string ipUsuarioBuscado;
 
 
 //########################
 //#### Metodos globales ##
 //########################
-
-//~~~~~~~~~~~~~~~~~~~~~~~~
-//~~ Metodos mensaje ~~~~~
-//~~~~~~~~~~~~~~~~~~~~~~~~
-void nuevoMensaje(string usuario,string mensaje)
-{
-    mensajes[contador++]=new Mensaje(usuario,mensaje);
-}
-
-void nuevoMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
-{
-    if(mensajesPrivados.find(bandejaUsuario)==mensajesPrivados.end())
-    {
-        vector<Mensaje*> vect; 
-        vect.push_back(new Mensaje(usuario,mensaje));
-        mensajesPrivados[bandejaUsuario]=vect;
-    }
-    else
-    {
-           
-        mensajesPrivados.at(bandejaUsuario).push_back(new Mensaje(usuario,mensaje));
-    }
- 
-}
 
 string getNombreChat(int id)
 {
@@ -399,10 +381,36 @@ void printAyuda()
     
 }
 
-void getUsuariosConectados(int sockfd,int posicionUsuariosConectados)
+void printUsuariosConectados(int posicionUsuariosConectados)
 {
 
-    usuariosConectadosLista.clear();
+    for (int i = 0; i < usuariosConectadosLista.size(); ++i)
+    {
+        string nombreIter=usuariosConectadosLista[i];
+        char nombreChar[nombreIter.size() + 1];
+        strcpy(nombreChar, nombreIter.c_str());
+
+
+        if(i==posicionUsuariosConectados)
+        {
+            attron(COLOR_PAIR(1));
+            mvprintw(2+i, 0,"%s",nombreChar);
+            attroff(COLOR_PAIR(1));
+        }
+        else
+        {
+            mvprintw(2+i, 0,"%s",nombreChar);
+        }
+
+    }
+
+
+
+}
+
+void actualizarBandejaPrivada()
+{
+
     connectedUserRequest * usuariosConectados(new connectedUserRequest);
 
     // IF userId 0 RETURN ALL CONNECTED USERS
@@ -421,55 +429,8 @@ void getUsuariosConectados(int sockfd,int posicionUsuariosConectados)
 
     send(sockfd, cstr3, strlen(cstr3), 0);
 
-    char buffer2[BUFSIZE];
-    // Esperar respuesta del servidor
-    bzero(buffer2, BUFSIZE);
-    recv(sockfd, buffer2, BUFSIZE, 0);
-
-    string ret(buffer2, BUFSIZE);
-    ServerMessage sm2;
-    sm2.ParseFromString(buffer2);
-    int option2 = sm2.option();
-
-
-    // MANEJAR MY INFO RESPONSE
-    if (option2 == 5)
-    {
-        cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
-        mvprintw(0, 0,"Usuarios Conectados: %d",cantidadUsuarios);
-        
-        refresh();
-
-
-        for(int i=0;i<cantidadUsuarios;i++)
-        {
-            string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
-
-            usuariosConectadosLista.push_back(nombreIter);
-
-            char nombreChar[nombreIter.size() + 1];
-            strcpy(nombreChar, nombreIter.c_str());
-
-            if(i==posicionUsuariosConectados)
-            {
-                attron(COLOR_PAIR(1));
-                mvprintw(2+i, 0,"%s",nombreChar);
-                attroff(COLOR_PAIR(1));
-            }
-            else
-            {
-                mvprintw(2+i, 0,"%s",nombreChar);
-            }
-
-            
-
-        }
-        
-    }
-
 }
-
-void printInfoDeUsuario(int sockfd,int posicionUsuariosConectados)
+void getInfoDeUsuario(int posicionUsuariosConectados)
 {
     connectedUserRequest * usuariosConectados(new connectedUserRequest);
 
@@ -489,56 +450,36 @@ void printInfoDeUsuario(int sockfd,int posicionUsuariosConectados)
 
     send(sockfd, cstr3, strlen(cstr3), 0);
 
-    char buffer2[BUFSIZE];
-    // Esperar respuesta del servidor
-    bzero(buffer2, BUFSIZE);
-    recv(sockfd, buffer2, BUFSIZE, 0);
+}
+void printInfoDeUsuario()
+{
 
-    string ret(buffer2, BUFSIZE);
-    ServerMessage sm2;
-    sm2.ParseFromString(buffer2);
-    int option2 = sm2.option();
+    string nombreIter=nombreUsuarioBuscado;
+    char nombreChar[nombreIter.size() + 1];
+    strcpy(nombreChar, nombreIter.c_str());
+    mvprintw(2, 0,"Nombre de usuario\t: %s",nombreChar);
 
+    string statusIter=statusUsuarioBuscado;
+    char statusChar[statusIter.size() + 1];
+    strcpy(statusChar, statusIter.c_str());
+    mvprintw(3, 0,"Status de usuario\t: %s",statusChar);
 
-    // MANEJAR MY INFO RESPONSE
-    if (option2 == 5)
-    {
-        string nombreIter=sm2.connecteduserresponse().connectedusers(0).username();
-        char nombreChar[nombreIter.size() + 1];
-        strcpy(nombreChar, nombreIter.c_str());
-        mvprintw(2, 0,"Nombre de usuario\t: %s",nombreChar);
+    mvprintw(4, 0,"Id de Usuario\t\t: %d",idUsuarioBuscado);
 
-        string statusIter=sm2.connecteduserresponse().connectedusers(0).status();
-        char statusChar[statusIter.size() + 1];
-        strcpy(statusChar, statusIter.c_str());
-        mvprintw(3, 0,"Status de usuario\t: %s",statusChar);
-
-        int userId=sm2.connecteduserresponse().connectedusers(0).userid();
-        mvprintw(4, 0,"Id de Usuario\t\t: %d",userId);
-
-        string ipIter=sm2.connecteduserresponse().connectedusers(0).ip();
-        char ipChar[ipIter.size() + 1];
-        strcpy(ipChar, ipIter.c_str());
-        mvprintw(5, 0,"Status de usuario\t: %s",ipChar);
-                
-        refresh();
+    string ipIter=ipUsuarioBuscado;
+    char ipChar[ipIter.size() + 1];
+    strcpy(ipChar, ipIter.c_str());
+    mvprintw(5, 0,"Status de usuario\t: %s",ipChar);
+            
+    refresh();
         
-    }
+
 
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
 //~~ Metodos Otros ~~~~~~~
 //~~~~~~~~~~~~~~~~~~~~~~~~
-void *spammer(void *arg){
-    int i=1;
-    while(n2 != 0){
-        nuevoMensaje("TU NANA","Hola Mundo");
-        sleep(5);
-        i++;
-    }
-}
-
 void mensajeglobal(string msj,int sockfd){
 
 	//sleep(5);
@@ -679,6 +620,32 @@ void mensajeprivadoStatus(string msj, string usrName ,int sockfd){
 	
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~
+//~~ Metodos mensaje ~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~
+void nuevoMensaje(string usuario,string mensaje,int sockfd)
+{
+    mensajeglobal(mensaje,sockfd);
+    mensajes[contador++]=new Mensaje(usuario,mensaje);
+}
+
+void nuevoMensajePrivado(string bandejaUsuario, string usuario,string mensaje)
+{
+    mensajeprivado(mensaje,bandejaUsuario,sockfd);
+    if(mensajesPrivados.find(bandejaUsuario)==mensajesPrivados.end())
+    {
+        vector<Mensaje*> vect; 
+        vect.push_back(new Mensaje(usuario,mensaje));
+        mensajesPrivados[bandejaUsuario]=vect;
+    }
+    else
+    {
+           
+        mensajesPrivados.at(bandejaUsuario).push_back(new Mensaje(usuario,mensaje));
+    }
+ 
+}
+
 void cambiarEstado(int estado,int sockfd)
 {
     string posiblesEstados[]={"ACTIVO","OCUPADO","INACTIVO"};
@@ -725,7 +692,58 @@ void cambiarEstado(int estado,int sockfd)
 
 }
 
+void *escucha(void *arg){
+    while(n2 != 0){
 
+        sleep(5);
+
+        char buffer2[BUFSIZE];
+        // Esperar respuesta del servidor
+        bzero(buffer2, BUFSIZE);
+        recv(sockfd, buffer2, BUFSIZE, 0);
+
+        string ret(buffer2, BUFSIZE);
+        ServerMessage sm2;
+        sm2.ParseFromString(buffer2);
+        int option2 = sm2.option();
+
+        // MANEJAR MY INFO RESPONSE
+        if (option2 == 5)
+        {
+            cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
+
+            if(cantidadUsuarios==1)
+            {
+                nombreUsuarioBuscado=sm2.connecteduserresponse().connectedusers(0).username();
+                statusUsuarioBuscado=sm2.connecteduserresponse().connectedusers(0).status();
+                idUsuarioBuscado=sm2.connecteduserresponse().connectedusers(0).userid();
+                ipUsuarioBuscado=sm2.connecteduserresponse().connectedusers(0).ip();
+
+            }
+
+
+            for(int i=0;i<cantidadUsuarios;i++)
+            {
+                string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
+                
+                if(mensajesPrivados.find(nombreIter)==mensajesPrivados.end())
+                {
+                    nuevoMensajePrivado(nombreIter);
+                    usuariosConectadosLista.push_back(nombreIter);
+                }
+
+                
+                
+
+            }
+            
+        }
+
+
+
+    }
+    pthread_exit(NULL);
+}
 
 void error(const char *msg)
 {
@@ -735,7 +753,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[]) {
 
-    int sockfd, portno, n, userId;
+    int portno, n, userId;
     struct sockaddr_in serv_addr;
     struct hostent *server;
     bool salir = false;
@@ -847,22 +865,26 @@ int main(int argc, char *argv[]) {
     
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
     mensajeglobal("hola",sockfd);
     mensajeglobalStatus("hola",sockfd);
     mensajeprivado("hola","usuarioPrueba",sockfd);
     mensajeprivadoStatus("hola","usuarioPrueba",sockfd);
+    */
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
 //~~ Cosas Temporales ~~~~
 //~~~~~~~~~~~~~~~~~~~~~~~~
+    /*
     nuevoMensajePrivado("Jose","Julian","Que onda");
     nuevoMensajePrivado("Julian","Julian","Que onda");
     nuevoMensajePrivado("Julian","Jose","Como vas?");
     nuevoMensajePrivado("Gustavo");
+    */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
     pthread_t hilo1;
-    pthread_create(&hilo1,NULL,spammer,NULL);
+    pthread_create(&hilo1,NULL,escucha,NULL);
     char buf[100] = {0}, *s = buf;
 
     int ch, cnt = 0;
@@ -896,7 +918,7 @@ int main(int argc, char *argv[]) {
 
     timeout(100);  // wait 100 milliseconds for input
 
- 
+
     while (n2 != 0) {
         erase();
 
@@ -939,6 +961,8 @@ int main(int argc, char *argv[]) {
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=9;
+                        actualizarBandejaPrivada();
+                        
                     }
                     else if(opcionMenuPrincipal==2)
                     {
@@ -954,6 +978,7 @@ int main(int argc, char *argv[]) {
                     {
                         opcionMenuPrincipal=1;
                         numPantalla=5;
+                        actualizarBandejaPrivada();
                     }
                     else if(opcionMenuPrincipal==5)
                     {
@@ -988,7 +1013,7 @@ int main(int argc, char *argv[]) {
                 if (ch == '\n') {
                     //esto se ejecuta al presionar enter
                     if(strlen(buf)>0)
-                        nuevoMensaje(argv[1],string(buf));
+                        nuevoMensaje(argv[1],string(buf),sockfd);
 
                     *s = 0;
                     sscanf(buf, "%d", &n2);
@@ -1164,7 +1189,8 @@ int main(int argc, char *argv[]) {
         else if(numPantalla==9)
         {
             //Usuarios conectados
-            getUsuariosConectados(sockfd,posUsuariosConectados);
+            mvprintw(0, 0,"Usuarios Conectados: %d",usuariosConectadosLista.size());
+            printUsuariosConectados(posUsuariosConectados);
             mvprintw(9, 0,"%d",posUsuariosConectados);
             refresh();
             if ((ch = getch()) != ERR) 
@@ -1187,6 +1213,7 @@ int main(int argc, char *argv[]) {
                 else if (ch=='\n') 
                 {
                     numPantalla=10;
+                    getInfoDeUsuario(posUsuariosConectados);
                     
                 }
 
@@ -1195,14 +1222,15 @@ int main(int argc, char *argv[]) {
         else if(numPantalla==10)
         {
             mvprintw(0, 0,"Informacion personal");
-            printInfoDeUsuario(sockfd, posUsuariosConectados);
+            printInfoDeUsuario();
             refresh();
 
             if ((ch = getch()) != ERR) 
             {
                 if (ch == 27) {
                     //si presiona [ESC]
-                    numPantalla=9;
+                    numPantalla=1;
+                    posUsuariosConectados=0;
                 }
 
 
@@ -1217,6 +1245,7 @@ int main(int argc, char *argv[]) {
  
     delwin(w);
     endwin();
-    pthread_join(hilo1,NULL);
+    pthread_cancel(hilo1);
+    //pthread_join(hilo1,NULL);
     return 0;
 }
