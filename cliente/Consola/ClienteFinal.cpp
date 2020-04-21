@@ -954,7 +954,7 @@ int main(int argc, char *argv[]) {
 
             HacerMenuPrincipal(opcionMenuPrincipal);        
            
-            mvprintw(9, 0,"%d",opcionMenuPrincipal);
+            //mvprintw(9, 0,"%d",opcionMenuPrincipal);
 
             
             refresh();
@@ -1074,7 +1074,7 @@ int main(int argc, char *argv[]) {
             //Bandeja de entrada de mensajes privados
             mvprintw(0, 0,"Bandeja de mensajes privados");
             printBandejaPrivada(2,posBandejaPrivada);
-            mvprintw(9, 0,"%d",posBandejaPrivada);
+            //mvprintw(9, 0,"%d",posBandejaPrivada);
 
             if(mensajeError!="")
             {
@@ -1244,7 +1244,7 @@ int main(int argc, char *argv[]) {
             //Usuarios conectados
             mvprintw(0, 0,"Usuarios Conectados: %d",usuariosConectadosLista.size());
             printUsuariosConectados(posUsuariosConectados);
-            mvprintw(9, 0,"%d",posUsuariosConectados);
+            //mvprintw(9, 0,"%d",posUsuariosConectados);
 
             if(mensajeError!="")
             {
