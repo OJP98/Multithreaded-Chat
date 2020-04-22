@@ -1023,7 +1023,7 @@ int main(int argc, char *argv[]) {
         else if(numPantalla==2)
         {
             mvprintw(0, 0,"CHAT GENERAL 2020");
-            actualizarBandejaPrivada();
+            //actualizarBandejaPrivada();
 
             if(mensajeError!="")
             {
