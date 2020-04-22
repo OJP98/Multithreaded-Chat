@@ -474,7 +474,7 @@ void printInfoDeUsuario()
     string ipIter=ipUsuarioBuscado;
     char ipChar[ipIter.size() + 1];
     strcpy(ipChar, ipIter.c_str());
-    mvprintw(5, 0,"Status de usuario\t: %s",ipChar);
+    mvprintw(5, 0,"Ip de usuario\t: %s",ipChar);
             
     refresh();
         
@@ -706,6 +706,9 @@ void *escucha(void *arg){
         // MANEJAR MY INFO RESPONSE
         else if (option2 == 5)
         {
+            usuariosConectadosLista.clear();
+            idUsuariosConectadosLista.clear();
+
             cantidadUsuarios=sm2.connecteduserresponse().connectedusers().size();
 
             if(cantidadUsuarios==1)
@@ -716,35 +719,37 @@ void *escucha(void *arg){
                 ipUsuarioBuscado=sm2.connecteduserresponse().connectedusers(0).ip();
 
             }
-
-            vector<string> nombreUsuariosListTemporal;
-            vector<int> idUsuariosListTemporal;
-            for(int i=0;i<cantidadUsuarios;i++)
-            {
-                string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
-                int idIter=sm2.connecteduserresponse().connectedusers(i).userid();
-
-                nombreUsuariosListTemporal.push_back(nombreIter);
-                idUsuariosListTemporal.push_back(idIter);
-                
-                if(mensajesPrivados.find(nombreIter)==mensajesPrivados.end())
+            
+                for(int i=0;i<cantidadUsuarios;i++)
                 {
-                    nuevoMensajePrivado(nombreIter);
+                    string nombreIter=sm2.connecteduserresponse().connectedusers(i).username();
+                    int idIter=sm2.connecteduserresponse().connectedusers(i).userid();
+
+                    
                     usuariosConectadosLista.push_back(nombreIter);
                     idUsuariosConectadosLista.push_back(idIter);
+                    
+                    if(mensajesPrivados.find(nombreIter)==mensajesPrivados.end())
+                    {
+                        nuevoMensajePrivado(nombreIter);
+                    }
                 }
-            }
 
-            for (int i = 0; i < usuariosConectadosLista.size(); ++i)
-            {
-                vector<string>::iterator it = find(nombreUsuariosListTemporal.begin(), nombreUsuariosListTemporal.end(), usuariosConectadosLista[i]);
-                if(it==nombreUsuariosListTemporal.end())
+
+
+                map<string,vector<Mensaje*>>::iterator iter;
+
+                for (iter=mensajesPrivados.begin(); iter != mensajesPrivados.end(); iter++)
                 {
-                    usuariosConectadosLista.erase(usuariosConectadosLista.begin()+i);
-                    idUsuariosConectadosLista.erase(idUsuariosConectadosLista.begin()+i);
-                    mensajesPrivados.erase(usuariosConectadosLista[i]);
+
+                    vector<string>::iterator it = find(usuariosConectadosLista.begin(), usuariosConectadosLista.end(), iter->first);
+                    if(it==usuariosConectadosLista.end())
+                    {
+                        mensajesPrivados.erase(iter->first);
+                    }
+
+                    
                 }
-            }
 
 
             
@@ -1018,6 +1023,7 @@ int main(int argc, char *argv[]) {
         else if(numPantalla==2)
         {
             mvprintw(0, 0,"CHAT GENERAL 2020");
+            actualizarBandejaPrivada();
 
             if(mensajeError!="")
             {
@@ -1075,6 +1081,8 @@ int main(int argc, char *argv[]) {
             mvprintw(0, 0,"Bandeja de mensajes privados");
             printBandejaPrivada(2,posBandejaPrivada);
             //mvprintw(9, 0,"%d",posBandejaPrivada);
+
+            actualizarBandejaPrivada();
 
             if(mensajeError!="")
             {
@@ -1243,6 +1251,7 @@ int main(int argc, char *argv[]) {
         {
             //Usuarios conectados
             mvprintw(0, 0,"Usuarios Conectados: %d",usuariosConectadosLista.size());
+            actualizarBandejaPrivada();
             printUsuariosConectados(posUsuariosConectados);
             //mvprintw(9, 0,"%d",posUsuariosConectados);
 
